@@ -1,0 +1,279 @@
+<!-- $Id: mod_conf_sql.html,v 1.8 2004/08/01 22:25:44 tj Exp tj $ -->
+<!-- $Source: /home/tj/proftpd/modules/doc/RCS/mod_conf_sql.html,v $ -->
+
+<html>
+<head>
+<title>ProFTPD module mod_conf_sql</title>
+</head>
+
+<body bgcolor=white>
+
+<hr>
+<center>
+<h2><b>ProFTPD module <code>mod_conf_sql</code></b></h2>
+</center>
+<hr><br>
+
+The <code>mod_conf_sql</code> module can be used to store configuration
+information, as would normally be found in the <code>proftpd.conf</code>
+file, in SQL tables, and to have <code>proftpd</code> consequently
+retrieve that configuration information.  Detailed usage instructions can be
+found <a href="#Usage">here</a>.
+
+<p>
+This module is contained in the <code>mod_conf_sql.c</code> file for
+ProFTPD 1.2.<i>x</i>, and is not compiled by default.  Installation instructions
+are discussed <a href="#Installation">here</a>.
+
+<p>
+The most current version of <code>mod_conf_sql</code> can be found at:
+<pre>
+  <a href="http://www.castaglia.org/proftpd/">http://www.castaglia.org/proftpd/</a>
+</pre>
+
+<h2>Author</h2>
+<p>
+Please contact TJ Saunders &lt;tj <i>at</i> castaglia.org&gt; with any
+questions, concerns, or suggestions regarding this module.
+
+<p>
+<hr>
+<h2><a name="Installation">Installation</a></h2>
+After unpacking the latest proftpd-1.2 code (at least 1.2.9rc1), copy the
+<code>mod_conf_sql.c</code> file into:
+<pre>
+  <i>proftpd-dir</i>/contrib/
+</pre>
+Then follow the normal steps for using third-party modules in proftpd, making
+sure to include <code>mod_sql</code> and a SQL backend module (either
+<code>mod_sql_mysql</code> or <code>mod_sql_postgres</code>), <i>e.g.</i>:
+<pre>
+  ./configure --with-modules=mod_sql:mod_sql_mysql:mod_conf_sql
+  make
+  make install
+</pre>
+
+<p>
+<hr>
+<h2><a name="Usage">Usage</a></h2>
+Conceptually, there are two basic elements in <code>proftpd.conf</code>:
+contexts and directives.  Contexts include <code>&lt;Anonymous&gt;</code>,
+<code>&lt;VirtualHost&gt;</code>, the &quot;server config&quot; default
+context, and conditional contexts such as <code>&lt;IfDefine&gt;</code> and
+<code>&lt;IfModule&gt;</code>.  Configuration directives are contained
+within a context.
+
+<p>
+Thus, to represent the configuration file contents within SQL tables, three
+things are needed: a table of contexts, a table of configuration directives,
+and a table that describes which directives are contained within which
+contexts.  <code>mod_conf_sql</code> thus relies on a database schema of
+three tables.  The SQL queries it uses rely on inner joins; this means
+that the underlying database <b>must</b> support <code>INNER JOIN</code>s.
+
+<p><b>Database Schema</b><br>
+Here is an example MySQL schema for the tables <code>mod_conf_sql</code>
+uses:
+<pre>
+  DROP TABLE ftpctxt;
+  CREATE TABLE ftpctxt (
+    id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    parent_id INTEGER UNSIGNED,
+    name VARCHAR(255),
+    value VARCHAR(255)
+  );
+
+  DROP TABLE ftpconf;
+  CREATE TABLE ftpconf (
+    id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    value BLOB
+  );
+
+  DROP TABLE ftpmap;
+  CREATE TABLE ftpmap (
+    conf_id INTEGER UNSIGNED NOT NULL,
+    ctxt_id INTEGER UNSIGNED NOT NULL
+  );
+</pre>
+Example PostgresQL schema:
+<pre>
+  DROP TABLE ftpctxt;
+  CREATE TABLE ftpctxt (
+    id SERIAL,
+    parent_id INTEGER,
+    name VARCHAR(255),
+    value VARCHAR(255),
+    PRIMARY KEY (id)
+  );
+
+  DROP TABLE ftpconf;
+  CREATE TABLE ftpconf (
+    id SERIAL,
+    name VARCHAR(255) NOT NULL,
+    value TEXT,
+    PRIMARY KEY (id)
+  );
+
+  DROP TABLE ftpmap;
+  CREATE TABLE ftpmap (
+    conf_id INTEGER NOT NULL,
+    ctxt_id INTEGER  NOT NULL
+  );
+</pre>
+Each context and configuration directive is assigned a unique ID.  The
+<code>ftpmap</code> table maps the configuration directive to its appropriate
+context by IDs.  In addition, each context has a parent context, which
+allows for nested contexts, such as:
+<pre>
+  &lt;Directory incoming&gt;
+    &lt;Limit DELE MKD RMD STOR XMKD XRMD&gt;
+      DenyAll
+    &lt;/Limit&gt;
+  &lt;/Directory&gt;
+</pre>
+The one allowed exception to this parent requirement context is the &quot;server config&quot; context, which is the default context in the
+<code>proftpd.conf</code> file.  This top-level context <b>must</b> have a
+<code>NULL</code> parent ID.
+
+<p><b>Configuration URI</b><br>
+How does <code>mod_conf_sql</code> do its magic?  This module uses ProFTPD's
+FSIO API to temporarily redefine what it means to open and read a file; it
+presents a file-like interface to a SQL table such that ProFTPD's configuration
+parser does not know that the configuration is coming from a database rather
+than a flat file.
+
+<p>
+In order to accomplish this magic, <code>mod_conf_sql</code> needs to know
+some things about the database, so that it can connect and retrieve the
+configuration data.  This information is provided in the &quot;path&quot;
+to the configuration file, using <code>proftpd</code>'s
+<code>-c</code>/<code>--config</code> command-line option.  The specific
+&quot;path&quot; to use for <code>mod_conf_sql</code> uses an URI-like
+syntax:
+<pre>
+  sql://<i>dbuser</i>:<i>dbpass</i>@<i>dbserver</i>/db:<i>dbname</i>
+    /ctxt:<i>table</i>[:<i>id,parent_id,key,value</i>][:where=<i>clause</i>]
+    /conf:<i>table</i>[:<i>id,key,value</i>][:where=<i>clause</i>]
+    /map:<i>table</i>[:<i>conf_id,ctxt_id</i>][:where=<i>clause</i>]
+    [/base_id=<i>id</i>]
+</pre>
+The syntax is long, but it has to be so in order to provide all of the
+information <code>mod_conf_sql</code> needs.  (This information cannot be
+stored in the configuration file because <code>mod_conf_sql</code> will
+be <b>constructing</b> that configuration file).
+
+<p>
+The &quot;sql://&quot; prefix informs the FSIO API that this &quot;path&quot;
+should be handled differently from a normal Unix filesystem path.  The
+<i>dbuser</i>, <i>dbpass</i>, and <i>dbserver</i> parts are the usual data
+needed to connect to a database; database server information, such as port
+number or Unix domain socket path, can be added to the <i>dbserver</i> string.
+<i>dbname</i> configures the name of the database to use.  Then, one
+specifies the names of the three tables to use (the context table, the
+directives table, and the mapping table); one can optionally configure the
+column names in those tables.  The default names of the table columns are
+shown in the example MySQL schema above.  Note that if column names are
+specified, <b>all</b> of the columns in the table <b>must</b> be provided.
+
+<p>
+The following example shows a &quot;path&quot; where the table names are
+specified, but the column names in those tables are left to the default
+values:
+<pre>
+  proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt/conf:ftpconf/map:ftpmap
+</pre>
+Explicitly specifying the column names in the above URI would make the
+&quot;path&quot; look like:
+<pre>
+  proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt:id,parent_id,type,info/conf:ftpconf:id,type,info/map:ftpmap:conf_id,ctxt_id
+</pre>
+This example shows a URI that causes <code>mod_conf_sql</code> to treat the
+context with an ID of of <em>baseid</em> as the toplevel configuration context,
+rather than the default:
+<pre>
+  proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt/conf:ftpconf/map:ftpmap/base_id=<i>baseid</i>
+</pre>
+
+<p>
+This URI-like path syntax can also be used as the parameter to the
+<code>Include</code> configuration directive.  When doing so, it is <b>very
+important</b> that the <code>/base_id=<em>id</em></code> URI syntax be used, so
+that the configuration parser knows the proper configuration data to retrieve
+from the SQL tables.
+<pre>
+  &lt;VirtualHost 1.2.3.4&gt;
+    Include sql://foo:bar@localhost/db:proftpd/ctxt:vhostctxt/conf:vhostconf/map:vhostmap/base_id=7
+  &lt;/VirtualHost&gt;
+</pre>
+This tells <code>mod_conf_sql</code> to look for a row in the
+<code>ftpctxt</code> table whose ID is 7, and then to recurse through the
+contents of this &quot;vhost&quot; context.
+
+<p>
+The <code>mod_conf_sql</code> module <i>does not</i> actually need
+<code>mod_sql</code> to be <i>configured</i>, using the normal
+<code>mod_sql</code> configuration directives; however,
+<code>mod_conf_sql</code> <i>does</i> require that <code>mod_sql</code>
+be <i>compiled</i> into <code>proftpd</code>.  It is possible to store the
+configuration information in one database, and the user/group authentication
+information in a completely different database.
+
+<p><b>Importing/Exporting</b><br>
+While storing configuration information in SQL tables may make some tasks
+easier, it will making editing of configurations more complex.  To help
+with this, <code>mod_conf_sql</code> is accompanied by two Perl scripts that
+can be used to import existing <code>proftpd.conf</code> files into a
+database, and to export configuration information from SQL tables back
+into a <code>proftpd.conf</code> file.
+
+<p>
+The <code>conf2sql.pl</code> script reads a given <code>proftpd.conf</code>
+configuration file and populates the SQL tables with the information
+from that file.  One specifies the database connection information, and
+the full path to the <code>proftpd.conf</code> to be imported.  The
+script will delete any existing information in the SQL tables.  Use
+<code>conf2sql.pl --help</code> to see usage information.
+
+<p>
+Example:
+<pre>
+  conf2sql.pl --dbdriver=mysql --dbname=proftpd --dbuser=foo --dbpass=bar --dbserver=localhost /etc/proftpd.conf
+</pre>
+Note that the script currently allows the SQL table names to be specified
+via command-line options, but the column names are assumed to be those
+mentioned above.
+
+<p>
+The <code>sql2conf.pl</code> script reads the SQL tables and reconstructs
+the <code>proftpd.conf</code> configuration file represented by those
+tables.  One specifies the database connection information.  Use
+<code>sql2conf.pl --help</code> to see usage information.
+
+<p>
+Example:
+<pre>
+  sql2conf.pl --dbdriver=mysql --dbname=proftpd --dbuser=foo --dbpass=bar --dbserver=localhost
+</pre>
+Note that the script currently allows the SQL table names to be specified
+via command-line options, but the column names are assumed to be those
+mentioned above.
+
+<p>
+<hr><br>
+
+Author: <i>$Author: tj $</i><br>
+Last Updated: <i>$Date: 2004/08/01 22:25:44 $</i><br>
+
+<br><hr>
+
+<font size=2><b><i>
+&copy; Copyright 2003,2004 TJ Saunders<br>
+ All Rights Reserved<br>
+</i></b></font>
+
+<hr><br>
+
+</body>
+</html>
+
