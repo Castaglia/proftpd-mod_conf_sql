@@ -633,10 +633,10 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
   if (!cmdtab) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": unable to find SQL hook symbol '%s'", name);
-    return ERROR(cmd);
+    return PR_ERROR(cmd);
   }
 
-  res = call_module(cmdtab->m, cmdtab->handler, cmd);
+  res = pr_module_call(cmdtab->m, cmdtab->handler, cmd);
 
   /* Do some sanity checks on the returned response. */
   if (MODRET_ISERROR(res)) {
