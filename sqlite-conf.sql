@@ -1,0 +1,21 @@
+DROP TABLE ftpctxt;
+CREATE TABLE ftpctxt (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER UNSIGNED,
+    name VARCHAR(255),
+    type VARCHAR(255),
+    info VARCHAR(255)
+);
+
+DROP TABLE ftpconf;
+CREATE TABLE ftpconf (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type VARCHAR(255) NOT NULL,
+    info BLOB
+);
+
+DROP TABLE ftpmap;
+CREATE TABLE ftpmap (
+    conf_id INTEGER UNSIGNED NOT NULL,
+    ctxt_id INTEGER UNSIGNED NOT NULL
+);
