@@ -1,7 +1,6 @@
 /*
  * ProFTPD: mod_conf_sql -- a module for reading configurations from SQL tables
- *
- * Copyright (c) 2003-2006 TJ Saunders
+ * Copyright (c) 2003-2016 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +23,6 @@
  *
  * This is mod_conf_sql, contrib software for proftpd 1.2 and above.
  * For more information contact TJ Saunders <tj@castaglia.org>.
- *
- * $Id: mod_conf_sql.c,v 1.8 2006/02/05 20:06:34 tj Exp tj $
  */
 
 #include "conf.h"
@@ -630,13 +627,13 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
   modret_t *res;
 
   cmdtab = pr_stash_get_symbol(PR_SYM_HOOK, name, NULL, NULL);
-  if (!cmdtab) {
+  if (cmdtab == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": unable to find SQL hook symbol '%s'", name);
-    return ERROR(cmd);
+    return PR_ERROR(cmd);
   }
 
-  res = call_module(cmdtab->m, cmdtab->handler, cmd);
+  res = pr_module_call(cmdtab->m, cmdtab->handler, cmd);
 
   /* Do some sanity checks on the returned response. */
   if (MODRET_ISERROR(res)) {
