@@ -29,16 +29,23 @@ usage() if $opts{'help'};
 
 die "$program: missing --dbdriver option\n" unless defined($opts{'dbdriver'});
 die "$program: missing --dbname option\n" unless defined($opts{'dbname'});
+if (!$opts{'dbdriver'} =~ /sqlite/i) {
 die "$program: missing --dbpass option\n" unless defined($opts{'dbpass'});
 die "$program: missing --dbserver option\n" unless defined($opts{'dbserver'});
 die "$program: missing --dbuser option\n" unless defined($opts{'dbuser'});
+}
 
 # We need a database handle.
 my $dbname = "$opts{'dbname'}\@$opts{'dbserver'}";
 
 # MySQL driver prefers 'database', Postgres likes 'dbname'
 my $dbkey = ($opts{'dbdriver'} =~ /mysql/i) ? 'database' : 'dbname';
-my $dsn = "DBI:$opts{'dbdriver'}:$dbkey=$opts{'dbname'};host=$opts{'dbserver'}";
+my $dsn;
+if ($opts{'dbdriver'} =~ /sqlite/i) {
+$dsn = "DBI:$opts{'dbdriver'}:$dbkey=$opts{'dbname'}";
+} else {
+$dsn = "DBI:$opts{'dbdriver'}:$dbkey=$opts{'dbname'};host=$opts{'dbserver'}";
+}
 
 my $dbh;
 unless ($dbh = DBI->connect($dsn, $opts{'dbuser'}, $opts{'dbpass'})) {
