@@ -36,7 +36,7 @@
 # error "ProFTPD 1.3.0rc1 or later required"
 #endif
 
-#define MOD_CONF_SQL_VERSION	"mod_conf_sql/0.7.1"
+#define MOD_CONF_SQL_VERSION    "mod_conf_sql/0.7.1"
 
 struct {
   char *user;
@@ -78,7 +78,7 @@ struct {
 #define SQLCONF_DEFAULT_CONF_ID_NAME    "conf_id"
 #define SQLCONF_DEFAULT_CTXT_ID_NAME    "ctxt_id"
 #define SQLCONF_DEFAULT_ID_NAME         "id"
-#define SQLCONF_DEFAULT_KEY_NAME       	"key"
+#define SQLCONF_DEFAULT_KEY_NAME        "key"
 #define SQLCONF_DEFAULT_PARENT_ID_NAME  "parent_id"
 #define SQLCONF_DEFAULT_VALUE_NAME      "value"
 
@@ -117,7 +117,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   }
 
   *tmp = '\0';
-  sqlconf_db.pass = pstrdup(sqlconf_pool, *uri); 
+  sqlconf_db.pass = pstrdup(sqlconf_pool, *uri);
 
   /* Advance past the given db passwd. */
   *uri = tmp + 1;
@@ -156,6 +156,12 @@ static int sqlconf_parse_uri_db(char **uri) {
 
   *tmp = '\0';
   sqlconf_db.database = pstrdup(sqlconf_pool, *uri);
+
+  int i;
+  int n=strlen(sqlconf_db.server);
+
+  // replace \ with /
+  for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
   *uri = tmp + 1;
   return 0;
@@ -220,7 +226,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
 
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
-        *uri = tmp2 + 1; 
+        *uri = tmp2 + 1;
         sqlconf_ctxts.where = pstrdup(sqlconf_pool, *uri);
 
         *uri = tmp + 1;
@@ -368,7 +374,7 @@ static int sqlconf_parse_uri_conf(char **uri) {
 
   *tmp2 = '\0';
   sqlconf_confs.key = pstrdup(sqlconf_pool, *uri);
- 
+
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
@@ -805,6 +811,8 @@ static int sqlconf_read_db(pool *p) {
   char *where = NULL;
   char *which_id = NULL;
 
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": start load from database");
   /* Load the SQL backend module we'll be using. */
   cmd = sqlconf_cmd_alloc(p, 0);
   res = sqlconf_dispatch(cmd, "sql_load_backend");
@@ -816,8 +824,13 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
-     pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
+  if (strncmp(sqlconf_db.database,"sqlite",6)!=0)
+  {
+      cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
+         pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
+  } else {
+      cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", NULL, NULL, sqlconf_db.server);
+  }
   res = sqlconf_dispatch(cmd, "sql_define_conn");
   destroy_pool(cmd->pool);
 
@@ -922,8 +935,10 @@ static int sqlconf_read_db(pool *p) {
 /* FSIO callbacks
  */
 
-static int sqlconf_fsio_lstat_cb(pr_fs_t *fs, const char *path,
-    struct stat *st) {
+static int sqlconf_fsio_fstat_cb(pr_fh_t *fh, int nb, struct stat *st) {
+  return 0;
+}
+static int sqlconf_fsio_lstat_cb(pr_fs_t *fs, const char *path, struct stat *st) {
   return 0;
 }
 
@@ -955,10 +970,10 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
         sqlconf_read_db(fh->fh_pool) < 0) {
       return -1;
     }
- 
+
     if (sqlconf_confi < sqlconf_conf->nelts) {
       char **lines = sqlconf_conf->elts;
-     
+
       /* Read from our built-up buffer, until there are no more lines to be
        * read.
        */
@@ -1023,6 +1038,7 @@ static void sqlconf_register(void) {
   /* Add the module's custom FS callbacks here. This module does not
    * provide callbacks for most of the operations.
    */
+  fs->fstat = sqlconf_fsio_fstat_cb;
   fs->lstat = sqlconf_fsio_lstat_cb;
   fs->open = sqlconf_fsio_open_cb;
   fs->read = sqlconf_fsio_read_cb;
