@@ -160,8 +160,9 @@ static int sqlconf_parse_uri_db(char **uri) {
   int i;
   int n=strlen(sqlconf_db.server);
 
-  // replace \ with /
-  for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
+  // replace \ with / server args if sqlconf_db.database = sqlite
+  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
+    for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
   *uri = tmp + 1;
   return 0;
