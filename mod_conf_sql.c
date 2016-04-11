@@ -101,11 +101,13 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
     errno = EINVAL;
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no : after server user : '%s'",*uri);
     return -1;
   }
 
   *tmp = '\0';
   sqlconf_db.user = pstrdup(sqlconf_pool, *uri);
+  pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": sqlconf_db.user:%s",sqlconf_db.user);
 
   /* Advance past the given db user. */
   *uri = tmp + 1;
@@ -113,6 +115,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '@');
   if (tmp == NULL) {
     errno = EINVAL;
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no @ after server user and pass : '%s'",*uri);
     return -1;
   }
 
@@ -125,6 +128,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '/');
   if (tmp == NULL) {
     errno = EINVAL;
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no / after server args : '%s'",*uri);
     return -1;
   }
 
@@ -137,11 +141,13 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
     errno = EINVAL;
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error on ':' not found after db args");
     return -1;
   }
 
   *tmp = '\0';
   if (strcmp(*uri, "db") != 0) {
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error next args after server are not db : '%s'",*uri);
     errno = EINVAL;
     return -1;
   }
@@ -151,6 +157,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '/');
   if (tmp == NULL) {
     errno = EINVAL;
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no / after db args : '%s'",*uri);
     return -1;
   }
 
@@ -160,9 +167,8 @@ static int sqlconf_parse_uri_db(char **uri) {
   int i;
   int n=strlen(sqlconf_db.server);
 
-  char *backend = get_param_ptr(main_server->conf, "SQLBackend", FALSE);
-  // replace \ with / server args if backend = sqlite
-  if (strncasecmp(backend,"sqlite",6)!=0)
+  // replace \ with / server args if sqlconf_db.database = sqlite
+  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
     for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
   *uri = tmp + 1;
@@ -826,8 +832,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  char *backend = get_param_ptr(main_server->conf, "SQLBackend", FALSE);
-  if (strncasecmp(backend,"sqlite",6)!=0)
+  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
   {
       cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
          pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
