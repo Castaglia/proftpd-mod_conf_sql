@@ -78,9 +78,9 @@ struct {
 #define SQLCONF_DEFAULT_CONF_ID_NAME    "conf_id"
 #define SQLCONF_DEFAULT_CTXT_ID_NAME    "ctxt_id"
 #define SQLCONF_DEFAULT_ID_NAME         "id"
-#define SQLCONF_DEFAULT_KEY_NAME        "key"
+#define SQLCONF_DEFAULT_KEY_NAME        "type"
 #define SQLCONF_DEFAULT_PARENT_ID_NAME  "parent_id"
-#define SQLCONF_DEFAULT_VALUE_NAME      "value"
+#define SQLCONF_DEFAULT_VALUE_NAME      "info"
 
 static pool *sqlconf_pool = NULL;
 static array_header *sqlconf_conf = NULL;
@@ -168,7 +168,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   int n=strlen(sqlconf_db.server);
 
   // replace \ with / server args if sqlconf_db.database = sqlite
-  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
+  if (strncasecmp(sqlconf_db.database,"sqlite",6)==0)
     for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
   *uri = tmp + 1;
@@ -832,7 +832,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
+  if (!strncasecmp(sqlconf_db.database,"sqlite",6)==0)
   {
       cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
          pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
