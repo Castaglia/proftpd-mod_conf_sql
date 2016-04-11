@@ -33,14 +33,15 @@ if (!$opts{'dbdriver'} =~ /sqlite/i) {
 die "$program: missing --dbpass option\n" unless defined($opts{'dbpass'});
 die "$program: missing --dbserver option\n" unless defined($opts{'dbserver'});
 die "$program: missing --dbuser option\n" unless defined($opts{'dbuser'});
-}
 
 # We need a database handle.
 my $dbname = "$opts{'dbname'}\@$opts{'dbserver'}";
+}
 
-# MySQL driver prefers 'database', Postgres likes 'dbname'
+# MySQL driver prefers 'database', Postgres and SQLite likes 'dbname'
 my $dbkey = ($opts{'dbdriver'} =~ /mysql/i) ? 'database' : 'dbname';
 my $dsn;
+# if sqlite not use host
 if ($opts{'dbdriver'} =~ /sqlite/i) {
 $dsn = "DBI:$opts{'dbdriver'}:$dbkey=$opts{'dbname'}";
 } else {
@@ -276,7 +277,14 @@ usage: $program [options] config-file
  Database Options:
 
   --dbdriver              DBD driver name , e.g. 'mysql'.  Required.
+  			  Valid value;
+			  - mysql ==> for mysql database
+			  - Pg ==> for postgresql database
+			  - SQLite ==> for sqlite database
   --dbname                Database name.  Required.
+  			  if dbdriver are SQLite dbname a used to specify the sqlite database path
+
+  			  The dbpass, dbserver, dbuser are not required for sqlite.
   --dbpass                Database user password.  Required.
   --dbserver              Database server.  Required.
   --dbuser                Database user.  Required.
