@@ -160,8 +160,9 @@ static int sqlconf_parse_uri_db(char **uri) {
   int i;
   int n=strlen(sqlconf_db.server);
 
-  // replace \ with / server args if sqlconf_db.database = sqlite
-  if (strncasecmp(sqlconf_db.database,"sqlite",6)!=0)
+  char *backend = get_param_ptr(main_server->conf, "SQLBackend", FALSE);
+  // replace \ with / server args if backend = sqlite
+  if (strncasecmp(backend,"sqlite",6)!=0)
     for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
   *uri = tmp + 1;
@@ -825,7 +826,8 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  if (strncmp(sqlconf_db.database,"sqlite",6)!=0)
+  char *backend = get_param_ptr(main_server->conf, "SQLBackend", FALSE);
+  if (strncasecmp(backend,"sqlite",6)!=0)
   {
       cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
          pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
