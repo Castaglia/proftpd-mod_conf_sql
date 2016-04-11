@@ -1,4 +1,4 @@
-# Example SQLite schema
+/* Example SQLite schema */
 CREATE TABLE IF NOT EXISTS ftpctxt (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_id INTEGER UNSIGNED,
