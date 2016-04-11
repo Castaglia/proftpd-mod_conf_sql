@@ -213,6 +213,11 @@ rather than the default:
   proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt/conf:ftpconf/map:ftpmap/base_id=<i>baseid</i>
 </pre>
 
+<p> for sqlite dbuser and dbpass are note used, use dbserver for file path and use \ in place of / for the file path : </p>
+<pre>
+  proftpd -c sql://nouser:nopass@\path\to\sqlite.db/db:sqlite/ctxt:ftpctxt/conf:ftpconf/map:ftpmap
+</pre>
+
 <p>
 This URI-like path syntax can also be used as the parameter to the
 <code>Include</code> configuration directive.  When doing so, it is <b>very
