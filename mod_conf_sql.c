@@ -978,7 +978,9 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
     if (!sqlconf_conf && sqlconf_read_db(fh->fh_pool) < 0) {
       return -1;
-    } else {
+    }
+
+    if (sqlconf_confi == 0) {
       pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": nb elements read from database = %u", sqlconf_conf->nelts);
     }
 
