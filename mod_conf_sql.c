@@ -521,6 +521,7 @@ static int sqlconf_parse_uri(char *uri) {
   /* First, skip past the prefix.  6 is the strlen of "sql://". */
   uri += 6;
 
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": parsing uri = '%s'",uri);
   if (sqlconf_parse_uri_db(&uri) < 0) {
     pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": failed parsing connect portion of URI");
