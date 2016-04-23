@@ -1045,7 +1045,7 @@ static void sqlconf_unload_ev(const void *event_data, void *user_data) {
 #endif /* !PR_SHARED_MODULE */
 
 
-void sqlconf_register() {
+void sqlconf_register(void) {
   pr_fs_t *fs = NULL;
   int exact=FALSE;
 
