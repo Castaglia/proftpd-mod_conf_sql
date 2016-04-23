@@ -1,6 +1,6 @@
 /*
  * ProFTPD: mod_conf_sql -- a module for reading configurations from SQL tables
- * Copyright (c) 2003-2006 TJ Saunders
+ * Copyright (c) 2003-2016 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
