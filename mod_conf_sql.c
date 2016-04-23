@@ -946,17 +946,14 @@ static int sqlconf_read_db(pool *p) {
  */
 
 static int sqlconf_fsio_fstat_cb(pr_fh_t *fh, int nb, struct stat *st) {
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   return 0;
 }
 static int sqlconf_fsio_lstat_cb(pr_fs_t *fs, const char *path, struct stat *st) {
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   return 0;
 }
 
 static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Is this a path that we can use? */
   if (strncmp("sql://", path, 6) == 0) {
     char *uri = pstrdup(sqlconf_pool, path);
@@ -976,7 +973,6 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
 static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Make sure this filehandle is for this module before trying to use it. */
   if (fh->fh_path &&
       strncmp("sql://", fh->fh_path, 6) == 0) {
@@ -1014,23 +1010,47 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
 static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
 
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Unregister the registered FS. */
   if (pr_unregister_fs("sql://") < 0) {
-    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": error unregistering fs: %s",
-      strerror(errno));
-
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": error unregistering fs: %s", strerror(errno));
   } else {
     pr_log_debug(DEBUG8, MOD_CONF_SQL_VERSION ": fs unregistered");
   }
 
 }
 
+#if defined(PR_SHARED_MODULE)
+static void sqlconf_unload_ev(const void *event_data, void *user_data) {
+  if (strcmp("mod_conf_sql.c", (const char *) event_data) == 0) {
+    /* Destroy the module pool. */
+    if (sqlconf_pool) {
+      destroy_pool(sqlconf_pool);
+      sqlconf_pool = NULL;
+    }
+    pr_event_unregister(&conf_sql_module, NULL, NULL);
+    /* Unregister the registered FS. */
+    if (pr_unregister_fs("sql://") < 0) {
+      pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": error unregistering fs: %s", strerror(errno));
+    } else {
+      pr_log_debug(DEBUG8, MOD_CONF_SQL_VERSION ": fs unregistered");
+    }
+  }
+}
+#endif /* !PR_SHARED_MODULE */
+
+
 void sqlconf_register_fs() {
   pr_fs_t *fs = NULL;
   int exact=FALSE;
 
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
+  /* Destroy the module pool. */
+  if (sqlconf_pool) {
+    destroy_pool(sqlconf_pool);
+    sqlconf_pool = NULL;
+  }
+  /* make a new pool */
+  sqlconf_pool = make_sub_pool(permanent_pool);
+
   fs = pr_get_fs("sql://",&exact);
   if (fs==NULL||(fs!=NULL&&exact==FALSE)) {
     /* Register a FS object, with which we will watch for 'sql://' files
@@ -1055,23 +1075,7 @@ void sqlconf_register_fs() {
   fs->read = sqlconf_fsio_read_cb;
 }
 
-static void sqlconf_preparse_ev(const void *event_data, void *user_data) {
-   pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
-   sqlconf_register_fs();
-}
-
 static void sqlconf_restart_ev(const void *event_data, void *user_data) {
-
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
-
-  /* Destroy the module pool. */
-  if (sqlconf_pool) {
-    destroy_pool(sqlconf_pool);
-    sqlconf_pool = NULL;
-  }
-  /* make a new pool */
-  sqlconf_pool = make_sub_pool(permanent_pool);
-
   sqlconf_register_fs();
 }
 
@@ -1079,16 +1083,14 @@ static void sqlconf_restart_ev(const void *event_data, void *user_data) {
  */
 
 static int sqlconf_init(void) {
-
-  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
-  sqlconf_pool = make_sub_pool(permanent_pool);
-
   sqlconf_register_fs();
 
   /* Register event handlers. */
-  pr_event_register(&conf_sql_module, "core.preparse", sqlconf_preparse_ev, NULL);
   pr_event_register(&conf_sql_module, "core.postparse", sqlconf_postparse_ev, NULL);
   pr_event_register(&conf_sql_module, "core.restart", sqlconf_restart_ev, NULL);
+# if defined(PR_SHARED_MODULE)
+  pr_event_register(&facl_module, "core.module-unload", sqlconf_mod_unload_ev, NULL);
+# endif /* !PR_SHARED_MODULE */
 
   return 0;
 }
