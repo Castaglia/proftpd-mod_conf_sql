@@ -1,6 +1,5 @@
 /*
  * ProFTPD: mod_conf_sql -- a module for reading configurations from SQL tables
- *
  * Copyright (c) 2003-2006 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,8 +23,6 @@
  *
  * This is mod_conf_sql, contrib software for proftpd 1.2 and above.
  * For more information contact TJ Saunders <tj@castaglia.org>.
- *
- * $Id: mod_conf_sql.c,v 1.8 2006/02/05 20:06:34 tj Exp tj $
  */
 
 #include "conf.h"
@@ -36,7 +33,7 @@
 # error "ProFTPD 1.3.0rc1 or later required"
 #endif
 
-#define MOD_CONF_SQL_VERSION    "mod_conf_sql/0.7.1"
+#define MOD_CONF_SQL_VERSION	"mod_conf_sql/0.7.2"
 
 struct {
   char *user;
@@ -88,7 +85,6 @@ static unsigned int sqlconf_confi = 0;
 
 module conf_sql_module;
 
-
 /* Prototypes */
 static int sqlconf_read_ctxt(pool *, int, int);
 static void sqlconf_register(void);
@@ -121,7 +117,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   }
 
   *tmp = '\0';
-  sqlconf_db.pass = pstrdup(sqlconf_pool, *uri);
+  sqlconf_db.pass = pstrdup(sqlconf_pool, *uri); 
 
   /* Advance past the given db passwd. */
   *uri = tmp + 1;
@@ -165,6 +161,9 @@ static int sqlconf_parse_uri_db(char **uri) {
   *tmp = '\0';
   sqlconf_db.database = pstrdup(sqlconf_pool, *uri);
 
+  /* convert \ in / in the path of the database
+   * because uri can contain / without complexe disambiguation
+   */
   int i;
   int n=strlen(sqlconf_db.server);
 
@@ -235,7 +234,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
 
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
-        *uri = tmp2 + 1;
+        *uri = tmp2 + 1; 
         sqlconf_ctxts.where = pstrdup(sqlconf_pool, *uri);
 
         *uri = tmp + 1;
@@ -383,7 +382,7 @@ static int sqlconf_parse_uri_conf(char **uri) {
 
   *tmp2 = '\0';
   sqlconf_confs.key = pstrdup(sqlconf_pool, *uri);
-
+ 
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
@@ -994,6 +993,7 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
       memcpy(buf, lines[sqlconf_confi++], buflen);
       return strlen(buf);
     }
+    /* after read all element unref array to make possible to restart the server */
     if (sqlconf_confi==sqlconf_conf->nelts) {
        sqlconf_conf=NULL;
     }
@@ -1019,6 +1019,12 @@ static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
 
 }
 
+static void sqlconf_restart_ev(const void *event_data, void *user_data) {
+
+  /* Register the FS object. */
+  sqlconf_register();
+}
+
 #if defined(PR_SHARED_MODULE)
 static void sqlconf_unload_ev(const void *event_data, void *user_data) {
   if (strcmp("mod_conf_sql.c", (const char *) event_data) == 0) {
@@ -1039,7 +1045,7 @@ static void sqlconf_unload_ev(const void *event_data, void *user_data) {
 #endif /* !PR_SHARED_MODULE */
 
 
-void sqlconf_register_fs() {
+void sqlconf_register() {
   pr_fs_t *fs = NULL;
   int exact=FALSE;
 
@@ -1075,15 +1081,13 @@ void sqlconf_register_fs() {
   fs->read = sqlconf_fsio_read_cb;
 }
 
-static void sqlconf_restart_ev(const void *event_data, void *user_data) {
-  sqlconf_register_fs();
-}
-
 /* Initialization functions
  */
 
 static int sqlconf_init(void) {
-  sqlconf_register_fs();
+
+  /* Register the FS object. */
+  sqlconf_register();
 
   /* Register event handlers. */
   pr_event_register(&conf_sql_module, "core.postparse", sqlconf_postparse_ev, NULL);
