@@ -94,6 +94,8 @@ static void sqlconf_register(void);
 
 static int sqlconf_parse_uri_db(char **uri) {
   char *tmp = NULL;
+  int i=0;
+  int n=0;
 
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
@@ -161,13 +163,10 @@ static int sqlconf_parse_uri_db(char **uri) {
   *tmp = '\0';
   sqlconf_db.database = pstrdup(sqlconf_pool, *uri);
 
-  /* convert \ in / in the path of the database
+  /* replace \ with / server args if sqlconf_db.database = sqlite
    * because uri can contain / without complexe disambiguation
    */
-  int i;
-  int n=strlen(sqlconf_db.server);
-
-  // replace \ with / server args if sqlconf_db.database = sqlite
+  n=strlen(sqlconf_db.server);
   if (strncasecmp(sqlconf_db.database,"sqlite",6)==0)
     for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
 
@@ -979,10 +978,10 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
     if (!sqlconf_conf && sqlconf_read_db(fh->fh_pool) < 0) {
       return -1;
     } else {
-      pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": nb elements read from database = %lu", sqlconf_conf->nelts);
+      pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": nb elements read from database = %u", sqlconf_conf->nelts);
     }
 
-    pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": return elements num = %lu", sqlconf_confi);
+    pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": return elements num = %u", sqlconf_confi);
     if (sqlconf_confi < sqlconf_conf->nelts) {
       char **lines = sqlconf_conf->elts;
 
