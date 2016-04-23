@@ -88,6 +88,7 @@ static unsigned int sqlconf_confi = 0;
 
 module conf_sql_module;
 
+
 /* Prototypes */
 static int sqlconf_read_ctxt(pool *, int, int);
 static void sqlconf_register(void);
@@ -101,13 +102,13 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
     errno = EINVAL;
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no : after server user : '%s'",*uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error no : after server user : '%s'",*uri);
     return -1;
   }
 
   *tmp = '\0';
   sqlconf_db.user = pstrdup(sqlconf_pool, *uri);
-  pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": sqlconf_db.user:%s",sqlconf_db.user);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": sqlconf_db.user:%s",sqlconf_db.user);
 
   /* Advance past the given db user. */
   *uri = tmp + 1;
@@ -115,7 +116,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '@');
   if (tmp == NULL) {
     errno = EINVAL;
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no @ after server user and pass : '%s'",*uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error no @ after server user and pass : '%s'",*uri);
     return -1;
   }
 
@@ -128,7 +129,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '/');
   if (tmp == NULL) {
     errno = EINVAL;
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no / after server args : '%s'",*uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error no / after server args : '%s'",*uri);
     return -1;
   }
 
@@ -141,13 +142,13 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
     errno = EINVAL;
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error on ':' not found after db args");
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error on ':' not found after db args");
     return -1;
   }
 
   *tmp = '\0';
   if (strcmp(*uri, "db") != 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error next args after server are not db : '%s'",*uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error next args after server are not db : '%s'",*uri);
     errno = EINVAL;
     return -1;
   }
@@ -157,7 +158,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   tmp = strchr(*uri, '/');
   if (tmp == NULL) {
     errno = EINVAL;
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": Error no / after db args : '%s'",*uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": Error no / after db args : '%s'",*uri);
     return -1;
   }
 
@@ -523,7 +524,7 @@ static int sqlconf_parse_uri(char *uri) {
   uri += 6;
 
   if (sqlconf_parse_uri_db(&uri) < 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": failed parsing connect portion of URI");
     return -1;
   }
@@ -536,7 +537,7 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_db.database);
 
   if (sqlconf_parse_uri_ctxt(&uri) < 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": failed parsing context table portion of URI");
     return -1;
   }
@@ -555,7 +556,7 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_ctxts.where ? sqlconf_ctxts.where : "(none)");
 
   if (sqlconf_parse_uri_conf(&uri) < 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": failed parsing directive table portion of URI");
     return -1;
   }
@@ -572,7 +573,7 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
   if (sqlconf_parse_uri_map(&uri) < 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": failed parsing map table portion of URI");
     return -1;
   }
@@ -594,7 +595,7 @@ static int sqlconf_parse_uri(char *uri) {
      *
      */
     if (strncmp(uri, "base_id=", 8) != 0) {
-      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
         ": failed parsing optional base ID portion of URI");
       errno = EINVAL;
       return -1;
@@ -645,7 +646,7 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
 
   cmdtab = pr_stash_get_symbol(PR_SYM_HOOK, name, NULL, NULL);
   if (!cmdtab) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": unable to find SQL hook symbol '%s'", name);
     return PR_ERROR(cmd);
   }
@@ -654,7 +655,7 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
 
   /* Do some sanity checks on the returned response. */
   if (MODRET_ISERROR(res)) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": '%s' error: %s", name,
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": '%s' error: %s", name,
       res->mr_message);
     return NULL;
   }
@@ -780,7 +781,7 @@ static int sqlconf_read_ctxt(pool *p, int ctxt_id, int isbase) {
   sd = res->data;
 
   if (sd->rnum > 1) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error: multiple key/values returned for given context ID (%d)",
       ctxt_id);
     return -1;
@@ -819,8 +820,8 @@ static int sqlconf_read_db(pool *p) {
   char *where = NULL;
   char *which_id = NULL;
 
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": start load from database");
+
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": start load from database");
   /* Load the SQL backend module we'll be using. */
   cmd = sqlconf_cmd_alloc(p, 0);
   res = sqlconf_dispatch(cmd, "sql_load_backend");
@@ -843,7 +844,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error defining database connection");
     errno = EINVAL;
     return -1;
@@ -855,7 +856,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error opening database connection");
     errno = EINVAL;
     return -1;
@@ -880,7 +881,7 @@ static int sqlconf_read_db(pool *p) {
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
     errno = EPERM;
     return -1;
@@ -893,7 +894,7 @@ static int sqlconf_read_db(pool *p) {
    */
   if (sd->rnum != 1 &&
       sd->fnum != 1) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": retrieving %s context failed: bad/non-unique results", which_id);
     errno = EPERM;
     return -1;
@@ -901,7 +902,7 @@ static int sqlconf_read_db(pool *p) {
 
   if (sd->data == NULL ||
       sd->data[0] == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": retrieving %s context failed: no matching results", which_id);
     errno = EPERM;
     return -1;
@@ -910,7 +911,8 @@ static int sqlconf_read_db(pool *p) {
   id = atoi(sd->data[0]);
   destroy_pool(cmd->pool);
 
-  sqlconf_conf = make_array(sqlconf_pool, 1, sizeof(char *));
+  sqlconf_conf = make_array(p, 1, sizeof(char *));
+  sqlconf_confi = 0;
   sqlconf_read_ctxt(p, id, TRUE);
 
   /* Close the connection. */
@@ -919,7 +921,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error closing database connection");
     errno = EINVAL;
     return -1;
@@ -931,7 +933,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION
       ": error cleaning up SQL system");
     errno = EINVAL;
     return -1;
@@ -944,17 +946,21 @@ static int sqlconf_read_db(pool *p) {
  */
 
 static int sqlconf_fsio_fstat_cb(pr_fh_t *fh, int nb, struct stat *st) {
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   return 0;
 }
 static int sqlconf_fsio_lstat_cb(pr_fs_t *fs, const char *path, struct stat *st) {
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   return 0;
 }
 
 static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Is this a path that we can use? */
   if (strncmp("sql://", path, 6) == 0) {
     char *uri = pstrdup(sqlconf_pool, path);
+    pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": fsio_open_cb : %s", uri);
 
     /* Parse through the given URI, breaking out the needed pieces. */
     if (sqlconf_parse_uri(uri) < 0)
@@ -970,15 +976,18 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
 static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Make sure this filehandle is for this module before trying to use it. */
   if (fh->fh_path &&
       strncmp("sql://", fh->fh_path, 6) == 0) {
 
-    if (!sqlconf_conf &&
-        sqlconf_read_db(fh->fh_pool) < 0) {
+    if (!sqlconf_conf && sqlconf_read_db(fh->fh_pool) < 0) {
       return -1;
+    } else {
+      pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": nb elements read from database = %lu", sqlconf_conf->nelts);
     }
 
+    pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": return elements num = %lu", sqlconf_confi);
     if (sqlconf_confi < sqlconf_conf->nelts) {
       char **lines = sqlconf_conf->elts;
 
@@ -988,6 +997,9 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
       pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": %s", lines[sqlconf_confi]);
       memcpy(buf, lines[sqlconf_confi++], buflen);
       return strlen(buf);
+    }
+    if (sqlconf_confi==sqlconf_conf->nelts) {
+       sqlconf_conf=NULL;
     }
 
     return 0;
@@ -1002,46 +1014,37 @@ static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
 static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
 
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
   /* Unregister the registered FS. */
   if (pr_unregister_fs("sql://") < 0) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": error unregistering fs: %s",
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": error unregistering fs: %s",
       strerror(errno));
 
   } else {
     pr_log_debug(DEBUG8, MOD_CONF_SQL_VERSION ": fs unregistered");
   }
 
-  /* Destroy the module pool. */
-  if (sqlconf_pool) {
-    destroy_pool(sqlconf_pool);
-    sqlconf_pool = NULL;
-  }
 }
 
-static void sqlconf_restart_ev(const void *event_data, void *user_data) {
-
-  /* Register the FS object. */
-  sqlconf_register();
-}
-
-/* Initialization functions
- */
-
-static void sqlconf_register(void) {
+void sqlconf_register_fs() {
   pr_fs_t *fs = NULL;
+  int exact=FALSE;
 
-  sqlconf_pool = make_sub_pool(permanent_pool);
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
+  fs = pr_get_fs("sql://",&exact);
+  if (fs==NULL||(fs!=NULL&&exact==FALSE)) {
+    /* Register a FS object, with which we will watch for 'sql://' files
+     * being opened, and intercept them.
+     */
+    fs = pr_register_fs(sqlconf_pool, "sqlconf", "sql://");
+    if (fs == NULL) {
+      pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": error registering fs: %s",
+	strerror(errno));
+      return;
+    }
+    pr_log_debug(DEBUG10, MOD_CONF_SQL_VERSION ": registered sqlconf 'sql://' fs");
 
-  /* Register a FS object, with which we will watch for 'sql://' files
-   * being opened, and intercept them.
-   */
-  fs = pr_register_fs(sqlconf_pool, "sqlconf", "sql://");
-  if (fs == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": error registering fs: %s",
-      strerror(errno));
-    return;
   }
-  pr_log_debug(DEBUG10, MOD_CONF_SQL_VERSION ": registered 'sqlconf' fs");
 
   /* Add the module's custom FS callbacks here. This module does not
    * provide callbacks for most of the operations.
@@ -1052,16 +1055,40 @@ static void sqlconf_register(void) {
   fs->read = sqlconf_fsio_read_cb;
 }
 
+static void sqlconf_preparse_ev(const void *event_data, void *user_data) {
+   pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
+   sqlconf_register_fs();
+}
+
+static void sqlconf_restart_ev(const void *event_data, void *user_data) {
+
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
+
+  /* Destroy the module pool. */
+  if (sqlconf_pool) {
+    destroy_pool(sqlconf_pool);
+    sqlconf_pool = NULL;
+  }
+  /* make a new pool */
+  sqlconf_pool = make_sub_pool(permanent_pool);
+
+  sqlconf_register_fs();
+}
+
+/* Initialization functions
+ */
+
 static int sqlconf_init(void) {
 
-  /* Register the FS object. */
-  sqlconf_register();
+  pr_log_stacktrace(MOD_CONF_SQL_VERSION,__func__);
+  sqlconf_pool = make_sub_pool(permanent_pool);
+
+  sqlconf_register_fs();
 
   /* Register event handlers. */
-  pr_event_register(&conf_sql_module, "core.postparse", sqlconf_postparse_ev,
-    NULL);
-  pr_event_register(&conf_sql_module, "core.restart", sqlconf_restart_ev,
-    NULL);
+  pr_event_register(&conf_sql_module, "core.preparse", sqlconf_preparse_ev, NULL);
+  pr_event_register(&conf_sql_module, "core.postparse", sqlconf_postparse_ev, NULL);
+  pr_event_register(&conf_sql_module, "core.restart", sqlconf_restart_ev, NULL);
 
   return 0;
 }
