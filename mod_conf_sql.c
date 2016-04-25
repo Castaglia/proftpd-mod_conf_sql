@@ -94,8 +94,8 @@ static void sqlconf_register(void);
 
 static int sqlconf_parse_uri_db(char **uri) {
   char *tmp = NULL;
-  int i=0;
-  int n=0;
+  int i = 0;
+  int n = 0;
 
   tmp = strchr(*uri, ':');
   if (tmp == NULL) {
@@ -166,9 +166,11 @@ static int sqlconf_parse_uri_db(char **uri) {
   /* replace \ with / server args if sqlconf_db.database = sqlite
    * because uri can contain / without complexe disambiguation
    */
-  n=strlen(sqlconf_db.server);
-  if (strncasecmp(sqlconf_db.database,"sqlite",6)==0)
-    for(i=0;i<=n;i++) if(sqlconf_db.server[i]=='\\') sqlconf_db.server[i]='/';
+  n = strlen(sqlconf_db.server);
+  if (strncasecmp(sqlconf_db.database, "sqlite", 6) == 0)
+    for(i = 0; i <= n; i++)
+      if(sqlconf_db.server[i] == '\\')
+        sqlconf_db.server[i] = '/';
 
   *uri = tmp + 1;
   return 0;
@@ -832,8 +834,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  if (!strncasecmp(sqlconf_db.database,"sqlite",6)==0)
-  {
+  if (!strncasecmp(sqlconf_db.database,"sqlite",6)==0) {
       cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
          pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
   } else {
@@ -1060,7 +1061,7 @@ static void sqlconf_register(void) {
   sqlconf_pool = make_sub_pool(permanent_pool);
 
   fs = pr_get_fs("sql://",&exact);
-  if (fs==NULL||(fs!=NULL&&exact==FALSE)) {
+  if (fs == NULL || (fs != NULL && exact == FALSE)) {
     /* Register a FS object, with which we will watch for 'sql://' files
      * being opened, and intercept them.
      */
