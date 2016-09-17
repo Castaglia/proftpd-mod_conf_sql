@@ -82,20 +82,21 @@ static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
   return host;
 }
 
-static char *uri_parse_port(pool *p, const char *orig_uri, const char *uri) {
+static int uri_parse_port(pool *p, const char *orig_uri, const char *uri,
+    unsigned int *port) {
   register unsigned int i;
-  char *ptr3, *portspec;
+  char *ptr, *ptr2, *portspec;
   size_t portspeclen;
 
   /* Look for any possible trailing '/'. */
-  ptr3 = strchr(ptr2, '/');
-  if (ptr3 == NULL) {
-    portspec = ptr2 + 1;
+  ptr = strchr(uri, '/');
+  if (ptr == NULL) {
+    portspec = ptr + 1;
     portspeclen = strlen(portspec);
 
   } else {
-    portspeclen = ptr3 - (ptr2 + 1);
-    portspec = pstrndup(p, ptr2 + 1, portspeclen);
+    portspeclen = uri - (ptr + 1);
+    portspec = pstrndup(p, ptr + 1, portspeclen);
   }
 
   /* Ensure that only numeric characters appear in the portspec. */
@@ -305,7 +306,13 @@ int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
   if (ptr2 != NULL) {
     ptr2 = strchr(ptr2, ':');
     if (ptr2 != NULL) {
-      *port = uri_parse_port(sub_pool, ptr2);
+      if (uri_parse_port(sub_pool, uri, ptr2, port) < 0) {
+        int xerrno = errno;
+
+        destroy_pool(sub_pool);
+        errno = xerrno;
+        return -1;
+      }
     }
   }
 

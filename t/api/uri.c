@@ -49,6 +49,7 @@ START_TEST (uri_parse_test) {
    *  foobarbaz
    *  sql://
    *  sql://host
+   *  sql://host/path
    *  sql://host:port
    *  sql://host:port/path
    *  sql://host:port/path?
@@ -60,6 +61,12 @@ START_TEST (uri_parse_test) {
    *  bad formats
    *  unknown/unsupported key names
    *  case-sensitivity?
+   *
+   * Use cases:
+   *
+   *  sql://user:pass@server:port/dbname
+   *  sql://@/path/to/sqlite.db
+   *  sql://@/path/to/sqlite.db/dbname
    */
 }
 END_TEST
