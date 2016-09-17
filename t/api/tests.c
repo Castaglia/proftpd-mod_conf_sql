@@ -89,9 +89,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /* Configure the Trace API to write to stderr. */
-  pr_trace_use_stderr(TRUE);
-
   requested = getenv("CONF_SQL_TEST_NOFORK");
   if (requested) {
     srunner_set_fork_status(runner, CK_NOFORK);
