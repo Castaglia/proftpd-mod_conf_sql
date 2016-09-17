@@ -1,2 +1,14 @@
-*.log
-*.swp
+configure
+Makefile
+config.log
+config.status
+autom4te.cache
+mod_conf_sql.h
+tests.log
+.libs
+.*.swp
+*.la
+*.lo
+*Tests*.log
+*.o
+*~

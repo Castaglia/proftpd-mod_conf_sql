@@ -27,10 +27,17 @@ script:
   - perl -cw ./conf2sql.pl
   - perl -cw ./sql2conf.pl
   - git clone https://github.com/proftpd/proftpd.git
-  - cp mod_conf_sql.c proftpd/contrib/
+  - mkdir -p proftpd/contrib/mod_conf_sql/
+  - cp *.[ch] proftpd/contrib/mod_conf_sql/
+  - cp mod_conf_sql.* proftpd/contrib/mod_conf_sql/
+  - cp Makefile.in proftpd/contrib/mod_conf_sql/
+  - cp config* proftpd/contrib/mod_conf_sql/
+  - cp install-sh proftpd/contrib/mod_conf_sql/
+  - cp -R t/ proftpd/contrib/mod_conf_sql/t/
   - cd proftpd
   - ./configure --enable-devel=coverage --enable-dso --enable-tests --with-shared=mod_sql:mod_sql_sqlite:mod_conf_sql
   - make
   - make clean
   - ./configure --enable-devel=coverage --enable-tests --with-modules=mod_sql:mod_sql_sqlite:mod_conf_sql
   - make
+  - cd contrib/mod_conf_sql && make TEST_VERBOSE=1 check && cd ../../

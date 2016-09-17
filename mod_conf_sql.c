@@ -25,15 +25,8 @@
  * For more information contact TJ Saunders <tj@castaglia.org>.
  */
 
-#include "conf.h"
+#include "mod_conf_sql.h"
 #include "mod_sql.h"
-
-/* Make sure the version of proftpd is as necessary. */
-#if PROFTPD_VERSION_NUMBER < 0x0001030001
-# error "ProFTPD 1.3.0rc1 or later required"
-#endif
-
-#define MOD_CONF_SQL_VERSION	"mod_conf_sql/0.8"
 
 /* Fake fd number for FSIO needs. */
 #define CONF_SQL_FILENO		2746
@@ -85,11 +78,11 @@ struct {
 #define SQLCONF_DEFAULT_PARENT_ID_NAME  "parent_id"
 #define SQLCONF_DEFAULT_VALUE_NAME      "value"
 
-static pool *sqlconf_pool = NULL;
+module conf_sql_module;
+pool *conf_sql_pool = NULL;
+
 static array_header *sqlconf_conf = NULL;
 static unsigned int sqlconf_confi = 0;
-
-module conf_sql_module;
 
 /* Prototypes */
 static int sqlconf_read_ctx(pool *, int, int);
@@ -114,7 +107,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   }
 
   *ptr = '\0';
-  sqlconf_db.user = pstrdup(sqlconf_pool, *uri);
+  sqlconf_db.user = pstrdup(conf_sql_pool, *uri);
 
   /* Advance past the given db user. */
   *uri = ptr + 1;
@@ -128,19 +121,19 @@ static int sqlconf_parse_uri_db(char **uri) {
   }
 
   *ptr = '\0';
-  sqlconf_db.pass = pstrdup(sqlconf_pool, *uri); 
+  sqlconf_db.pass = pstrdup(conf_sql_pool, *uri); 
 
   /* Advance past the given db passwd. */
   *uri = ptr + 1;
 
   ptr = strchr(*uri, '?');
   if (ptr == NULL) {
-    sqlconf_db.server = pstrdup(sqlconf_pool, *uri);
+    sqlconf_db.server = pstrdup(conf_sql_pool, *uri);
     return 0;
   }
 
   *ptr = '\0';
-  sqlconf_db.server = pstrdup(sqlconf_pool, *uri);
+  sqlconf_db.server = pstrdup(conf_sql_pool, *uri);
 
   /* Advance past the given server info.  We should now be in the portion
    * of the URI which uses query parameter formatting.
@@ -168,7 +161,7 @@ static int sqlconf_parse_uri_db(char **uri) {
   }
 
   *ptr = '\0';
-  sqlconf_db.database = pstrdup(sqlconf_pool, *uri);
+  sqlconf_db.database = pstrdup(conf_sql_pool, *uri);
 
   *uri = ptr + 1;
   return 0;
@@ -201,13 +194,13 @@ static int sqlconf_parse_uri_ctx(char **uri) {
 
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_ctxs.tab = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.tab = pstrdup(conf_sql_pool, *uri);
     *uri = tmp + 1;
     return 0;
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxs.tab = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.tab = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -234,7 +227,7 @@ static int sqlconf_parse_uri_ctx(char **uri) {
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
         *uri = tmp2 + 1; 
-        sqlconf_ctxs.where = pstrdup(sqlconf_pool, *uri);
+        sqlconf_ctxs.where = pstrdup(conf_sql_pool, *uri);
 
         *uri = tmp + 1;
         return 0;
@@ -247,7 +240,7 @@ static int sqlconf_parse_uri_ctx(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxs.id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.id = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -258,7 +251,7 @@ static int sqlconf_parse_uri_ctx(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxs.parent_id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.parent_id = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -269,23 +262,23 @@ static int sqlconf_parse_uri_ctx(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxs.key = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.key = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_ctxs.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.value = pstrdup(conf_sql_pool, *uri);
 
   } else {
     *tmp2 = '\0';
-    sqlconf_ctxs.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.value = pstrdup(conf_sql_pool, *uri);
 
     *uri = tmp2 + 1;
     if (strncmp(*uri, "where=", 6) == 0) {
       *uri += 6;
-      sqlconf_ctxs.where = pstrdup(sqlconf_pool, *uri);
+      sqlconf_ctxs.where = pstrdup(conf_sql_pool, *uri);
 
     } else {
       errno = EINVAL;
@@ -323,13 +316,13 @@ static int sqlconf_parse_uri_conf(char **uri) {
 
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_confs.tab = pstrdup(sqlconf_pool, *uri);
+    sqlconf_confs.tab = pstrdup(conf_sql_pool, *uri);
     *uri = tmp + 1;
     return 0;
   }
 
   *tmp2 = '\0';
-  sqlconf_confs.tab = pstrdup(sqlconf_pool, *uri);
+  sqlconf_confs.tab = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -356,7 +349,7 @@ static int sqlconf_parse_uri_conf(char **uri) {
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
         *uri = tmp2 + 1;
-        sqlconf_confs.where = pstrdup(sqlconf_pool, *uri);
+        sqlconf_confs.where = pstrdup(conf_sql_pool, *uri);
 
         *uri = tmp + 1;
         return 0;
@@ -369,7 +362,7 @@ static int sqlconf_parse_uri_conf(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_confs.id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_confs.id = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -380,23 +373,23 @@ static int sqlconf_parse_uri_conf(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_confs.key = pstrdup(sqlconf_pool, *uri);
+  sqlconf_confs.key = pstrdup(conf_sql_pool, *uri);
  
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_confs.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_confs.value = pstrdup(conf_sql_pool, *uri);
 
   } else {
     *tmp2 = '\0';
-    sqlconf_confs.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_confs.value = pstrdup(conf_sql_pool, *uri);
 
     *uri = tmp2 + 1;
     if (strncmp(*uri, "where=", 6) == 0) {
       *uri += 6;
-      sqlconf_confs.where = pstrdup(sqlconf_pool, *uri);
+      sqlconf_confs.where = pstrdup(conf_sql_pool, *uri);
 
     } else {
       errno = EINVAL;
@@ -429,13 +422,13 @@ static int sqlconf_parse_uri_map(char **uri) {
 
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_maps.tab = pstrdup(sqlconf_pool, *uri);
+    sqlconf_maps.tab = pstrdup(conf_sql_pool, *uri);
     *uri = tmp ? tmp + 1 : *uri + strlen(*uri);
     return 0;
   }
 
   *tmp2 = '\0';
-  sqlconf_maps.tab = pstrdup(sqlconf_pool, *uri);
+  sqlconf_maps.tab = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -462,7 +455,7 @@ static int sqlconf_parse_uri_map(char **uri) {
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
         *uri = tmp2 + 1;
-        sqlconf_maps.where = pstrdup(sqlconf_pool, *uri);
+        sqlconf_maps.where = pstrdup(conf_sql_pool, *uri);
 
         *uri = tmp + 1;
         *uri += strlen(*uri);
@@ -476,23 +469,23 @@ static int sqlconf_parse_uri_map(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_maps.conf_id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_maps.conf_id = pstrdup(conf_sql_pool, *uri);
 
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_maps.ctx_id = pstrdup(sqlconf_pool, *uri);
+    sqlconf_maps.ctx_id = pstrdup(conf_sql_pool, *uri);
 
   } else {
     *tmp2 = '\0';
-    sqlconf_maps.ctx_id = pstrdup(sqlconf_pool, *uri);
+    sqlconf_maps.ctx_id = pstrdup(conf_sql_pool, *uri);
 
     *uri = tmp2 + 1;
     if (strncmp(*uri, "where=", 6) == 0) {
       *uri += 6;
-      sqlconf_maps.where = pstrdup(sqlconf_pool, *uri);
+      sqlconf_maps.where = pstrdup(conf_sql_pool, *uri);
 
     } else {
       errno = EINVAL;
@@ -616,7 +609,7 @@ static int sqlconf_parse_uri(char *uri) {
     }
 
     uri += 8;
-    sqlconf_ctxs.base_id = pstrdup(sqlconf_pool, uri);
+    sqlconf_ctxs.base_id = pstrdup(conf_sql_pool, uri);
     pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id: '%s'",
       sqlconf_ctxs.base_id);
   }
@@ -755,7 +748,7 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   for (i = 0; i < sd->rnum; i++) {
     char *str;
 
-    str = pstrcat(sqlconf_pool, sd->data[(i * sd->fnum)], " ",
+    str = pstrcat(conf_sql_pool, sd->data[(i * sd->fnum)], " ",
       sd->data[(i * sd->fnum) + 1], "\n", NULL);
     *((char **) push_array(sqlconf_conf)) = str;
   }
@@ -810,7 +803,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   if (ctx_key &&
       !isbase) {
-    *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_pool, "<",
+    *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "<",
       ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
   }
 
@@ -824,7 +817,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   if (ctx_key &&
       !isbase) {
-    *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_pool, "</",
+    *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "</",
       ctx_key, ">\n", NULL);
   }
 
@@ -924,7 +917,7 @@ static int sqlconf_read_db(pool *p) {
   id = atoi(sd->data[0]);
   destroy_pool(cmd->pool);
 
-  sqlconf_conf = make_array(sqlconf_pool, 1, sizeof(char *));
+  sqlconf_conf = make_array(conf_sql_pool, 1, sizeof(char *));
   sqlconf_read_ctx(p, id, TRUE);
 
   /* Close the connection. */
@@ -966,7 +959,7 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
   /* Is this a path that we can use? */
   if (strncmp("sql://", path, 6) == 0) {
-    char *uri = pstrdup(sqlconf_pool, path);
+    char *uri = pstrdup(conf_sql_pool, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
     if (sqlconf_parse_uri(uri) < 0) {
@@ -1025,9 +1018,9 @@ static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
   }
 
   /* Destroy the module pool. */
-  if (sqlconf_pool) {
-    destroy_pool(sqlconf_pool);
-    sqlconf_pool = NULL;
+  if (conf_sql_pool) {
+    destroy_pool(conf_sql_pool);
+    conf_sql_pool = NULL;
   }
 }
 
@@ -1043,12 +1036,12 @@ static void sqlconf_restart_ev(const void *event_data, void *user_data) {
 static void sqlconf_register(void) {
   pr_fs_t *fs = NULL;
 
-  sqlconf_pool = make_sub_pool(permanent_pool);
+  conf_sql_pool = make_sub_pool(permanent_pool);
 
   /* Register a FS object, with which we will watch for 'sql://' files
    * being opened, and intercept them.
    */
-  fs = pr_register_fs(sqlconf_pool, "sqlconf", "sql://");
+  fs = pr_register_fs(conf_sql_pool, "sqlconf", "sql://");
   if (fs == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": error registering fs: %s",
       strerror(errno));
