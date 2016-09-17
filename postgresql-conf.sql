@@ -1,7 +1,6 @@
 # Example PostgresqlSQL schema
 
-DROP TABLE ftpctxt;
-CREATE TABLE ftpctxt (
+CREATE TABLE ftpctxt IF NOT EXISTS (
   id SERIAL,
   parent_id INTEGER,
   name VARCHAR(255),
@@ -9,17 +8,14 @@ CREATE TABLE ftpctxt (
   PRIMARY KEY (id)
 );
 
-DROP TABLE ftpconf;
-CREATE TABLE ftpconf (
+CREATE TABLE ftpconf IF NOT EXISTS (
   id SERIAL,
   name VARCHAR(255) NOT NULL,
   value TEXT,
   PRIMARY KEY (id)
 );
 
-DROP TABLE ftpmap;
-CREATE TABLE ftpmap (
+CREATE TABLE ftpmap IF NOT EXISTS (
   conf_id INTEGER NOT NULL,
-  ctxt_id INTEGER  NOT NULL
+  ctxt_id INTEGER NOT NULL
 );
-
