@@ -7,7 +7,7 @@ use File::Basename qw(basename);
 use Getopt::Long;
 
 my $program = basename($0);
-my %opts = (
+my $opts = {
   # Default table parameters
   'ctx-tab' => 'ftpctx',
   'conf-tab' => 'ftpconf',
@@ -15,29 +15,40 @@ my %opts = (
 
   # Default context name prefix to use
   'ctx-prefix' => 'ctx',
-);
+};
 
-GetOptions(\%opts, 'add-conf', 'conf-tab=s', 'ctx-prefix=s', 'ctx-tab=s',
+GetOptions($opts, 'add-conf', 'conf-tab=s', 'ctx-prefix=s', 'ctx-tab=s',
   'dbdriver=s', 'dbname=s', 'dbpass=s', 'dbserver=s', 'dbuser=s', 'dry-run',
   'help', 'map-tab=s', 'show-sql', 'verbose') or usage();
 
-usage() if $opts{'help'};
+usage() if $opts->{help};
 
-die "$program: missing --dbdriver option\n" unless defined($opts{'dbdriver'});
-die "$program: missing --dbname option\n" unless defined($opts{'dbname'});
-die "$program: missing --dbpass option\n" unless defined($opts{'dbpass'});
-die "$program: missing --dbserver option\n" unless defined($opts{'dbserver'});
-die "$program: missing --dbuser option\n" unless defined($opts{'dbuser'});
+die "$program: missing --dbdriver option\n" unless defined($opts->{dbdriver});
+die "$program: missing --dbname option\n" unless defined($opts->{dbname});
 
 # We need a database handle.
-my $dbname = "$opts{'dbname'}\@$opts{'dbserver'}";
+my ($dbname, $dbkey, $dsn);
 
-# MySQL driver prefers 'database', Postgres likes 'dbname'
-my $dbkey = ($opts{'dbdriver'} =~ /mysql/i) ? 'database' : 'dbname';
-my $dsn = "DBI:$opts{'dbdriver'}:$dbkey=$opts{'dbname'};host=$opts{'dbserver'}";
+# SQLite, unlike other databases, does not require server/user/pass options.
+if ($opts->{dbdriver} =~ /sqlite/i) {
+  $dbname = "$opts->{dbname}";
+  $dbkey = 'dbname';
+  $dsn = "DBI:$opts->{dbdriver}:$dbkey=$opts->{dbname}";
+
+} else {
+  die "$program: missing --dbpass option\n" unless defined($opts->{dbpass});
+  die "$program: missing --dbserver option\n" unless defined($opts->{dbserver});
+  die "$program: missing --dbuser option\n" unless defined($opts->{dbuser});
+
+  # MySQL driver prefers 'database', Postgres likes 'dbname'
+  $dbkey = ($opts->{dbdriver} =~ /mysql/i) ? 'database' : 'dbname';
+
+  $dbname = "$opts->{dbname}\@$opts->{dbserver}";
+  $dsn = "DBI:$opts->{dbdriver}:$dbkey=$opts->{dbname};host=$opts->{dbserver}";
+}
 
 my $dbh;
-unless ($dbh = DBI->connect($dsn, $opts{'dbuser'}, $opts{'dbpass'})) {
+unless ($dbh = DBI->connect($dsn, $opts->{dbuser}, $opts->{dbpass})) {
   die "$program: unable to connect to $dbname: $DBI::errstr\n";
 }
 
@@ -46,7 +57,7 @@ open(my $conf, "< $file") or die "$program: unable to read $file: $!\n";
 
 # The default/"server config" context
 my $ctx = {
-  'name' => $opts{'ctx-prefix'} . '1',
+  'name' => $opts->{'ctx-prefix'} . '1',
   'key' => 'default',
   'value' => undef,
   'directives' => [],
@@ -93,7 +104,7 @@ while (chomp(my $line = <$conf>)) {
     my ($key, $value) = ($1, $3);
     $ctxno++;
     my $sub_ctx = {
-      'name' => $opts{'ctx-prefix'} . $ctxno,
+      'name' => $opts->{'ctx-prefix'} . $ctxno,
       'key' => $key,
       'value' => $value,
       'directives' => [],
@@ -138,29 +149,29 @@ close($conf);
 
 my ($sql, $sth);
 
-unless ($opts{'add-conf'}) {
-  $sql = "DELETE FROM $opts{'ctx-tab'}";
+unless ($opts->{'add-conf'}) {
+  $sql = "DELETE FROM $opts->{'ctx-tab'}";
   $sth = dbi_prep_sql($sql);
   dbi_exec_sql($sql, $sth);
   dbi_free_sql($sth);
 
-  $sql = "DELETE FROM $opts{'conf-tab'}";
+  $sql = "DELETE FROM $opts->{'conf-tab'}";
   $sth = dbi_prep_sql($sql);
   dbi_exec_sql($sql, $sth);
   dbi_free_sql($sth);
 
-  $sql = "DELETE FROM $opts{'map-tab'}";
+  $sql = "DELETE FROM $opts->{'map-tab'}";
   $sth = dbi_prep_sql($sql);
   dbi_exec_sql($sql, $sth);
   dbi_free_sql($sth);
 }
 
-$sql = "INSERT INTO $opts{'ctx-tab'} (parent_id, name, type, info) VALUES (NULL, '" . ($opts{'ctx-prefix'} . '1') . "', 'default', NULL)";
+$sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (NULL, '" . ($opts->{'ctx-prefix'} . '1') . "', 'default', NULL)";
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 dbi_free_sql($sth);
 
-$sql = "SELECT id FROM $opts{'ctx-tab'} WHERE type = 'default' AND info IS NULL";
+$sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = 'default' AND value IS NULL";
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 my $parent_id = ($sth->fetchrow_array())[0];
@@ -177,7 +188,7 @@ sub dbi_prep_sql {
 
   unless ($sth = $dbh->prepare($sql)) {
     warn "$program: unable to prepare '$sql': $DBI::errstr\n"
-      if $opts{'verbose'};
+      if $opts->{verbose};
     return;
   }
 
@@ -188,12 +199,12 @@ sub dbi_prep_sql {
 sub dbi_exec_sql {
   my ($sql, $sth) = @_;
 
-  print "$program: executing: $sql\n" if $opts{'show-sql'};
+  print "$program: executing: $sql\n" if $opts->{'show-sql'};
 
-  unless ($opts{'dry-run'}) {
+  unless ($opts->{'dry-run'}) {
     unless ($sth->execute()) {
       warn "$program: error executing '$sql': $DBI::errstr\n"
-        if $opts{'verbose'};
+        if $opts->{verbose};
       return;
     }
   }
@@ -217,18 +228,18 @@ sub process_ctx {
     my $key = $dbh->quote($conf->{'key'});
     my $value = $dbh->quote($conf->{'value'});
 
-    $sql = "INSERT INTO $opts{'conf-tab'} (type, info) VALUES ($key, $value)";
+    $sql = "INSERT INTO $opts->{'conf-tab'} (type, value) VALUES ($key, $value)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
-    $sql = "SELECT id FROM $opts{'conf-tab'} WHERE type = $key AND info = $value";
+    $sql = "SELECT id FROM $opts->{'conf-tab'} WHERE type = $key AND value = $value";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $conf_id = ($sth->fetchrow_array())[0];
     dbi_free_sql($sth);
 
-    $sql = "INSERT INTO $opts{'map-tab'} (ctx_id, conf_id) VALUES ($ctx_id, $conf_id)";
+    $sql = "INSERT INTO $opts->{'map-tab'} (ctx_id, conf_id) VALUES ($ctx_id, $conf_id)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
@@ -240,12 +251,12 @@ sub process_ctx {
     my $key = $dbh->quote($sub_ctx->{'key'});
     my $value = $dbh->quote($sub_ctx->{'value'});
 
-    $sql = "INSERT INTO $opts{'ctx-tab'} (parent_id, name, type, info) VALUES ($ctx_id, $name, $key, $value)";
+    $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES ($ctx_id, $name, $key, $value)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
-    $sql = "SELECT id FROM $opts{'ctx-tab'} WHERE type = $key AND info = $value AND parent_id = $ctx_id";
+    $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = $key AND value = $value AND parent_id = $ctx_id";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $sub_ctx_id = ($sth->fetchrow_array())[0];
@@ -272,9 +283,9 @@ usage: $program [options] config-file
 
  Table Options:
 
-  --conf-tab              Default: $opts{'conf-tab'}
-  --ctx-tab               Default: $opts{'ctx-tab'}
-  --map-tab               Default: $opts{'map-tab'}
+  --conf-tab              Default: $opts->{'conf-tab'}
+  --ctx-tab               Default: $opts->{'ctx-tab'}
+  --map-tab               Default: $opts->{'map-tab'}
 
  General Options:
 
@@ -284,7 +295,7 @@ usage: $program [options] config-file
                           to retain existing information when importing
                           additional configurations.
 
-  --ctx-prefix            Default: $opts{'ctx-prefix'}
+  --ctx-prefix            Default: $opts->{'ctx-prefix'}
 
   --dry-run
 
