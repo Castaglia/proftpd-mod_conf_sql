@@ -27,9 +27,15 @@
 #ifndef MOD_CONF_SQL_URI_H
 #define MOD_CONF_SQL_URI_H
 
-int sqlconf_uri_parse_db(pool *p, const char *uri, char **username,
-  char **password, char **host);
-int sqlconf_uri_parse_params(pool *p, const char *uri,
-  const pr_table_t *params);
+/* Expected format of the URI:
+ *
+ * sql://dbuser:dbpass@dbserver[:dbport][/dbname]\
+ *   &ctx=<table>[:id,parent_id,key,value][:where=<clause>]\
+ *   &conf=<table>[:id,key,value][:where=<clause>]\
+ *   &map=<table>[:conf_id,ctx_id][:where=<clause>]\
+ *   [&base_id=<name>]
+ */
+int sqlconf_uri_parse(pool *p, const char *uri, char **host, unsigned int *port,
+  char **username, char **password, pr_table_t *params);
 
 #endif /* MOD_CONF_SQL_URI_H */

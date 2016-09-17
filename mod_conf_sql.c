@@ -85,7 +85,7 @@ static array_header *sqlconf_conf = NULL;
 static unsigned int sqlconf_confi = 0;
 
 /* Prototypes */
-static int sqlconf_read_ctx(pool *, int, int);
+static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase);
 static void sqlconf_register(void);
 
 /* URI parsing routines

@@ -41,7 +41,26 @@ static void tear_down(void) {
   } 
 }
 
-START_TEST (uri_parse_db_test) {
+START_TEST (uri_parse_test) {
+
+  /* URLs to test:
+   *
+   *  foo
+   *  foobarbaz
+   *  sql://
+   *  sql://host
+   *  sql://host:port
+   *  sql://host:port/path
+   *  sql://host:port/path?
+   *  sql://username:password@host:port/path?
+   *  sql://ipv4
+   *  sql://[ipv6]
+   *
+   * THEN there'll be the params parsing:
+   *  bad formats
+   *  unknown/unsupported key names
+   *  case-sensitivity?
+   */
 }
 END_TEST
 
@@ -54,7 +73,7 @@ Suite *tests_get_uri_suite(void) {
 
   tcase_add_checked_fixture(testcase, set_up, tear_down);
 
-  tcase_add_test(testcase, uri_parse_db_test);
+  tcase_add_test(testcase, uri_parse_test);
 
   suite_add_tcase(suite, testcase);
   return suite;
