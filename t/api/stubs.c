@@ -36,6 +36,12 @@ module *static_modules[] = { NULL };
 module *loaded_modules = NULL;
 xaset_t *server_list = NULL;
 
+void pr_alarms_block(void) {
+}
+
+void pr_alarms_unblock(void) {
+}
+
 void pr_log_debug(int level, const char *fmt, ...) {
   if (getenv("TEST_VERBOSE") != NULL) {
     va_list msg;
@@ -55,6 +61,23 @@ void pr_log_pri(int prio, const char *fmt, ...) {
     va_list msg;
 
     fprintf(stderr, "PRI%d: ", prio);
+
+    va_start(msg, fmt);
+    vfprintf(stderr, fmt, msg);
+    va_end(msg);
+
+    fprintf(stderr, "\n");
+  }
+}
+
+void pr_signals_handle(void) {
+}
+
+int pr_trace_msg(const char *trace_channel, int level, const char *fmt, ...) {
+  if (getenv("TEST_VERBOSE") != NULL) {
+    va_list msg;
+
+    fprintf(stderr, "%s:%d: ", trace_channel, level);
 
     va_start(msg, fmt);
     vfprintf(stderr, fmt, msg);

@@ -21,7 +21,6 @@ TEST_API_DEPS=\
   $(top_srcdir)/src/str.o \
   $(top_srcdir)/src/sets.o \
   $(top_srcdir)/src/table.o \
-  $(top_srcdir)/src/support.o \
   $(module_srcdir)/uri.o
 
 TEST_API_LIBS=-lcheck
