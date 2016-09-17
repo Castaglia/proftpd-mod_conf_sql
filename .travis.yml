@@ -24,7 +24,8 @@ before_script:
 script:
   # - find . -type f -name "*.c" -print | grep -v t\/ | xargs cppcheck 2>&1
   # - find . -type f -name "*.c" -print | grep -v t\/ | xargs rats --language=c
-  - perl -cw conf2sql.pl
+  - perl -cw ./conf2sql.pl
+  - perl -cw ./sql2conf.pl
   - git clone https://github.com/proftpd/proftpd.git
   - cp mod_conf_sql.c proftpd/contrib/
   - cd proftpd
