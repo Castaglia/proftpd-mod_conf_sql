@@ -72,7 +72,7 @@ that the underlying database <b>must</b> support <code>INNER JOIN</code>s.
 Here is an example MySQL schema for the tables <code>mod_conf_sql</code>
 uses:
 <pre>
-  CREATE TABLE ftpctxt IF NOT EXISTS (
+  CREATE TABLE ftpctx IF NOT EXISTS (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
     parent_id INTEGER UNSIGNED,
     name VARCHAR(255),
@@ -87,12 +87,12 @@ uses:
 
   CREATE TABLE ftpmap IF NOT EXISTS (
     conf_id INTEGER UNSIGNED NOT NULL,
-    ctxt_id INTEGER UNSIGNED NOT NULL
+    ctx_id INTEGER UNSIGNED NOT NULL
   );
 </pre>
 Example PostgresQL schema:
 <pre>
-  CREATE TABLE ftpctxt IF NOT EXISTS (
+  CREATE TABLE ftpctx IF NOT EXISTS (
     id SERIAL,
     parent_id INTEGER,
     name VARCHAR(255),
@@ -109,7 +109,7 @@ Example PostgresQL schema:
 
   CREATE TABLE ftpmap IF NOT EXISTS (
     conf_id INTEGER NOT NULL,
-    ctxt_id INTEGER  NOT NULL
+    ctx_id INTEGER NOT NULL
   );
 </pre>
 Each context and configuration directive is assigned a unique ID.  The
@@ -144,9 +144,9 @@ to the configuration file, using <code>proftpd</code>'s
 syntax:
 <pre>
   sql://<i>dbuser</i>:<i>dbpass</i>@<i>dbserver</i>/db:<i>dbname</i>
-    /ctxt:<i>table</i>[:<i>id,parent_id,key,value</i>][:where=<i>clause</i>]
+    /ctx:<i>table</i>[:<i>id,parent_id,key,value</i>][:where=<i>clause</i>]
     /conf:<i>table</i>[:<i>id,key,value</i>][:where=<i>clause</i>]
-    /map:<i>table</i>[:<i>conf_id,ctxt_id</i>][:where=<i>clause</i>]
+    /map:<i>table</i>[:<i>conf_id,ctx_id</i>][:where=<i>clause</i>]
     [/base_id=<i>id</i>]
 </pre>
 The syntax is long, but it has to be so in order to provide all of the
@@ -172,18 +172,18 @@ The following example shows a &quot;path&quot; where the table names are
 specified, but the column names in those tables are left to the default
 values:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt/conf:ftpconf/map:ftpmap
+  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctx:ftpctx/conf:ftpconf/map:ftpmap
 </pre>
 Explicitly specifying the column names in the above URI would make the
 &quot;path&quot; look like:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt:id,parent_id,type,value/conf:ftpconf:id,type,value/map:ftpmap:conf_id,ctxt_id
+  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctx:ftpctx:id,parent_id,type,value/conf:ftpconf:id,type,value/map:ftpmap:conf_id,ctx_id
 </pre>
 This example shows a URI that causes <code>mod_conf_sql</code> to treat the
 context with an ID of of <em>baseid</em> as the toplevel configuration context,
 rather than the default:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctxt:ftpctxt/conf:ftpconf/map:ftpmap/base_id=<i>baseid</i>
+  $ proftpd -c sql://foo:bar@localhost/db:proftpd/ctx:ftpctx/conf:ftpconf/map:ftpmap/base_id=<i>baseid</i>
 </pre>
 
 <p>
@@ -194,11 +194,11 @@ that the configuration parser knows the proper configuration data to retrieve
 from the SQL tables.
 <pre>
   &lt;VirtualHost 1.2.3.4&gt;
-    Include sql://foo:bar@localhost/db:proftpd/ctxt:vhostctxt/conf:vhostconf/map:vhostmap/base_id=7
+    Include sql://foo:bar@localhost/db:proftpd/ctx:vhostctx/conf:vhostconf/map:vhostmap/base_id=7
   &lt;/VirtualHost&gt;
 </pre>
 This tells <code>mod_conf_sql</code> to look for a row in the
-<code>ftpctxt</code> table whose ID is 7, and then to recurse through the
+<code>ftpctx</code> table whose ID is 7, and then to recurse through the
 contents of this &quot;vhost&quot; context.
 
 <p>

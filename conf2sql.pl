@@ -1,7 +1,4 @@
 #!/usr/bin/env perl
-# ---------------------------------------------------------------------------
-#  $Id: conf2sql.pl,v 1.2 2003/07/02 22:16:32 tj Exp tj $
-# ---------------------------------------------------------------------------
 
 use strict;
 
@@ -11,17 +8,16 @@ use Getopt::Long;
 
 my $program = basename($0);
 my %opts = (
-
   # Default table parameters
-  'ctxt-tab' => 'ftpctxt',
+  'ctx-tab' => 'ftpctx',
   'conf-tab' => 'ftpconf',
   'map-tab' => 'ftpmap',
 
   # Default context name prefix to use
-  'ctxt-prefix' => 'ctxt',
+  'ctx-prefix' => 'ctx',
 );
 
-GetOptions(\%opts, 'add-conf', 'conf-tab=s', 'ctxt-prefix=s', 'ctxt-tab=s',
+GetOptions(\%opts, 'add-conf', 'conf-tab=s', 'ctx-prefix=s', 'ctx-tab=s',
   'dbdriver=s', 'dbname=s', 'dbpass=s', 'dbserver=s', 'dbuser=s', 'dry-run',
   'help', 'map-tab=s', 'show-sql', 'verbose') or usage();
 
@@ -49,19 +45,19 @@ my $file = $ARGV[0];
 open(my $conf, "< $file") or die "$program: unable to read $file: $!\n";
 
 # The default/"server config" context
-my $ctxt = {
-  'name' => $opts{'ctxt-prefix'} . '1',
+my $ctx = {
+  'name' => $opts{'ctx-prefix'} . '1',
   'key' => 'default',
   'value' => undef,
   'directives' => [],
   'contexts' => [],
 };
 
-my @ctxt_stk = ();
-unshift(@ctxt_stk, $ctxt);
+my @ctxs = ();
+unshift(@ctxs, $ctx);
 
 my $i = 0;
-my $ctxtno = 1;
+my $ctxno = 1;
 while (chomp(my $line = <$conf>)) {
   $i++;
  
@@ -95,18 +91,18 @@ while (chomp(my $line = <$conf>)) {
     $line =~ /^<(\S+)(\s+)?(.*)?>.*$/;
 
     my ($key, $value) = ($1, $3);
-    $ctxtno++;
-    my $sub_ctxt = {
-      'name' => $opts{'ctxt-prefix'} . $ctxtno,
+    $ctxno++;
+    my $sub_ctx = {
+      'name' => $opts{'ctx-prefix'} . $ctxno,
       'key' => $key,
       'value' => $value,
       'directives' => [],
       'contexts' => [],
     };
 
-    push(@{ $ctxt->{'contexts'} }, $sub_ctxt);
-    unshift(@ctxt_stk, $sub_ctxt);
-    $ctxt = $sub_ctxt;
+    push(@{ $ctx->{'contexts'} }, $sub_ctx);
+    unshift(@ctxs, $sub_ctx);
+    $ctx = $sub_ctx;
 
   # If the line starts with a '</', it's the end of the current context
   # (unless the current context is the default one, in which case it's
@@ -116,21 +112,21 @@ while (chomp(my $line = <$conf>)) {
 
     # Note: if the closing context name value doesn't match the current context
     # key value, it's a syntax error in the config
-    if ($1 ne $ctxt->{'key'}) {
+    if ($1 ne $ctx->{'key'}) {
       die "$program: syntax error in $file, line $i ($line): improperly nested contexts\n";
     }
 
-    shift(@ctxt_stk) if (scalar(@ctxt_stk) > 1);
-    $ctxt = $ctxt_stk[0];
+    shift(@ctxs) if (scalar(@ctxs) > 1);
+    $ctx = $ctxs[0];
 
   # Otherwise, it's a directive for the current context
   } else {
 
     if ($line =~ /^(\S+)\s+(.*)$/) {
-      push(@{ $ctxt->{'directives'} }, { 'key' => $1, 'value' => $2 });
+      push(@{ $ctx->{'directives'} }, { 'key' => $1, 'value' => $2 });
 
     } else {
-      push(@{ $ctxt->{'directives'} }, { 'key' => $line, 'value' => '' }); 
+      push(@{ $ctx->{'directives'} }, { 'key' => $line, 'value' => '' }); 
     }
   }
 }
@@ -143,7 +139,7 @@ close($conf);
 my ($sql, $sth);
 
 unless ($opts{'add-conf'}) {
-  $sql = "DELETE FROM $opts{'ctxt-tab'}";
+  $sql = "DELETE FROM $opts{'ctx-tab'}";
   $sth = dbi_prep_sql($sql);
   dbi_exec_sql($sql, $sth);
   dbi_free_sql($sth);
@@ -159,18 +155,18 @@ unless ($opts{'add-conf'}) {
   dbi_free_sql($sth);
 }
 
-$sql = "INSERT INTO $opts{'ctxt-tab'} (parent_id, name, type, info) VALUES (NULL, '" . ($opts{'ctxt-prefix'} . '1') . "', 'default', NULL)";
+$sql = "INSERT INTO $opts{'ctx-tab'} (parent_id, name, type, info) VALUES (NULL, '" . ($opts{'ctx-prefix'} . '1') . "', 'default', NULL)";
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 dbi_free_sql($sth);
 
-$sql = "SELECT id FROM $opts{'ctxt-tab'} WHERE type = 'default' AND info IS NULL";
+$sql = "SELECT id FROM $opts{'ctx-tab'} WHERE type = 'default' AND info IS NULL";
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 my $parent_id = ($sth->fetchrow_array())[0];
 dbi_free_sql($sth);
 
-process_ctxt($ctxt, $parent_id);
+process_ctx($ctx, $parent_id);
 
 exit 0;
 
@@ -212,12 +208,12 @@ sub dbi_free_sql {
 }
 
 # ---------------------------------------------------------------------------
-sub process_ctxt {
-  my ($ctxt, $ctxt_id) = @_;
+sub process_ctx {
+  my ($ctx, $ctx_id) = @_;
   my ($sql, $sth);
 
   # First, handle all of the configuration directives in this context
-  foreach my $conf (@{ $ctxt->{'directives'} }) {
+  foreach my $conf (@{ $ctx->{'directives'} }) {
     my $key = $dbh->quote($conf->{'key'});
     my $value = $dbh->quote($conf->{'value'});
 
@@ -232,30 +228,30 @@ sub process_ctxt {
     my $conf_id = ($sth->fetchrow_array())[0];
     dbi_free_sql($sth);
 
-    $sql = "INSERT INTO $opts{'map-tab'} (ctxt_id, conf_id) VALUES ($ctxt_id, $conf_id)";
+    $sql = "INSERT INTO $opts{'map-tab'} (ctx_id, conf_id) VALUES ($ctx_id, $conf_id)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
   }
 
   # Next, handle any contained contexts in this context
-  foreach my $sub_ctxt (@{ $ctxt->{'contexts'} }) {
-    my $name = $dbh->quote($sub_ctxt->{'name'});
-    my $key = $dbh->quote($sub_ctxt->{'key'});
-    my $value = $dbh->quote($sub_ctxt->{'value'});
+  foreach my $sub_ctx (@{ $ctx->{'contexts'} }) {
+    my $name = $dbh->quote($sub_ctx->{'name'});
+    my $key = $dbh->quote($sub_ctx->{'key'});
+    my $value = $dbh->quote($sub_ctx->{'value'});
 
-    $sql = "INSERT INTO $opts{'ctxt-tab'} (parent_id, name, type, info) VALUES ($ctxt_id, $name, $key, $value)";
+    $sql = "INSERT INTO $opts{'ctx-tab'} (parent_id, name, type, info) VALUES ($ctx_id, $name, $key, $value)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
-    $sql = "SELECT id FROM $opts{'ctxt-tab'} WHERE type = $key AND info = $value AND parent_id = $ctxt_id";
+    $sql = "SELECT id FROM $opts{'ctx-tab'} WHERE type = $key AND info = $value AND parent_id = $ctx_id";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
-    my $sub_ctxt_id = ($sth->fetchrow_array())[0];
+    my $sub_ctx_id = ($sth->fetchrow_array())[0];
     dbi_free_sql($sth);
 
-    process_ctxt($sub_ctxt, $sub_ctxt_id);
+    process_ctx($sub_ctx, $sub_ctx_id);
   }
 }
 
@@ -277,7 +273,7 @@ usage: $program [options] config-file
  Table Options:
 
   --conf-tab              Default: $opts{'conf-tab'}
-  --ctxt-tab              Default: $opts{'ctxt-tab'}
+  --ctx-tab               Default: $opts{'ctx-tab'}
   --map-tab               Default: $opts{'map-tab'}
 
  General Options:
@@ -288,7 +284,7 @@ usage: $program [options] config-file
                           to retain existing information when importing
                           additional configurations.
 
-  --ctxt-prefix           Default: $opts{'ctxt-prefix'}
+  --ctx-prefix            Default: $opts{'ctx-prefix'}
 
   --dry-run
 

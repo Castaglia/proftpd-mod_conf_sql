@@ -53,7 +53,7 @@ struct {
 
   char *where;
   char *base_id;
-} sqlconf_ctxts;
+} sqlconf_ctxs;
 
 struct {
   char *tab;
@@ -67,13 +67,13 @@ struct {
 struct {
   char *tab;
   char *conf_id;
-  char *ctxt_id;
+  char *ctx_id;
 
   char *where;
 } sqlconf_maps;
 
 #define SQLCONF_DEFAULT_CONF_ID_NAME    "conf_id"
-#define SQLCONF_DEFAULT_CTXT_ID_NAME    "ctxt_id"
+#define SQLCONF_DEFAULT_CTXT_ID_NAME    "ctx_id"
 #define SQLCONF_DEFAULT_ID_NAME         "id"
 #define SQLCONF_DEFAULT_KEY_NAME       	"key"
 #define SQLCONF_DEFAULT_PARENT_ID_NAME  "parent_id"
@@ -86,7 +86,7 @@ static unsigned int sqlconf_confi = 0;
 module conf_sql_module;
 
 /* Prototypes */
-static int sqlconf_read_ctxt(pool *, int, int);
+static int sqlconf_read_ctx(pool *, int, int);
 static void sqlconf_register(void);
 
 /* URI parsing routines
@@ -158,10 +158,10 @@ static int sqlconf_parse_uri_db(char **uri) {
   return 0;
 }
 
-static int sqlconf_parse_uri_ctxt(char **uri) {
+static int sqlconf_parse_uri_ctx(char **uri) {
   char *tmp = NULL, *tmp2 = NULL;
 
-  if (strncmp(*uri, "ctxt:", 5) != 0) {
+  if (strncmp(*uri, "ctx:", 4) != 0) {
     errno = EINVAL;
     return -1;
   }
@@ -175,23 +175,23 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
   }
 
   /* Defaults */
-  sqlconf_ctxts.id = SQLCONF_DEFAULT_ID_NAME;
-  sqlconf_ctxts.parent_id = SQLCONF_DEFAULT_PARENT_ID_NAME;
-  sqlconf_ctxts.key = SQLCONF_DEFAULT_KEY_NAME;
-  sqlconf_ctxts.value = SQLCONF_DEFAULT_VALUE_NAME;
-  sqlconf_ctxts.where = NULL;
+  sqlconf_ctxs.id = SQLCONF_DEFAULT_ID_NAME;
+  sqlconf_ctxs.parent_id = SQLCONF_DEFAULT_PARENT_ID_NAME;
+  sqlconf_ctxs.key = SQLCONF_DEFAULT_KEY_NAME;
+  sqlconf_ctxs.value = SQLCONF_DEFAULT_VALUE_NAME;
+  sqlconf_ctxs.where = NULL;
 
   *tmp = '\0';
 
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_ctxts.tab = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.tab = pstrdup(sqlconf_pool, *uri);
     *uri = tmp + 1;
     return 0;
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxts.tab = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.tab = pstrdup(sqlconf_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -201,7 +201,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
     /* At this point, it's possible that the URI is specifying a WHERE clause,
      * so that it looks like:
      *
-     *  ctxt:where=foo
+     *  ctx:where=foo
      *
      * So, check for a '=' character here.
      */
@@ -218,7 +218,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
       /* Make sure it's "where=". */
       if (strcmp(*uri, "where") == 0) {
         *uri = tmp2 + 1; 
-        sqlconf_ctxts.where = pstrdup(sqlconf_pool, *uri);
+        sqlconf_ctxs.where = pstrdup(sqlconf_pool, *uri);
 
         *uri = tmp + 1;
         return 0;
@@ -231,7 +231,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxts.id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.id = pstrdup(sqlconf_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -242,7 +242,7 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxts.parent_id = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.parent_id = pstrdup(sqlconf_pool, *uri);
 
   *uri = tmp2 + 1;
 
@@ -253,23 +253,23 @@ static int sqlconf_parse_uri_ctxt(char **uri) {
   }
 
   *tmp2 = '\0';
-  sqlconf_ctxts.key = pstrdup(sqlconf_pool, *uri);
+  sqlconf_ctxs.key = pstrdup(sqlconf_pool, *uri);
 
   *uri = tmp2 + 1;
 
   /* Check for the optional "where=foo" URI syntax construct here. */
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_ctxts.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.value = pstrdup(sqlconf_pool, *uri);
 
   } else {
     *tmp2 = '\0';
-    sqlconf_ctxts.value = pstrdup(sqlconf_pool, *uri);
+    sqlconf_ctxs.value = pstrdup(sqlconf_pool, *uri);
 
     *uri = tmp2 + 1;
     if (strncmp(*uri, "where=", 6) == 0) {
       *uri += 6;
-      sqlconf_ctxts.where = pstrdup(sqlconf_pool, *uri);
+      sqlconf_ctxs.where = pstrdup(sqlconf_pool, *uri);
 
     } else {
       errno = EINVAL;
@@ -408,7 +408,7 @@ static int sqlconf_parse_uri_map(char **uri) {
 
   /* Defaults */
   sqlconf_maps.conf_id = SQLCONF_DEFAULT_CONF_ID_NAME;
-  sqlconf_maps.ctxt_id = SQLCONF_DEFAULT_CTXT_ID_NAME;
+  sqlconf_maps.ctx_id = SQLCONF_DEFAULT_CTXT_ID_NAME;
   sqlconf_maps.where = NULL;
 
   tmp2 = strchr(*uri, ':');
@@ -467,11 +467,11 @@ static int sqlconf_parse_uri_map(char **uri) {
   /* Check for the optional "where=foo" URI syntax construct here. */
   tmp2 = strchr(*uri, ':');
   if (tmp2 == NULL) {
-    sqlconf_maps.ctxt_id = pstrdup(sqlconf_pool, *uri);
+    sqlconf_maps.ctx_id = pstrdup(sqlconf_pool, *uri);
 
   } else {
     *tmp2 = '\0';
-    sqlconf_maps.ctxt_id = pstrdup(sqlconf_pool, *uri);
+    sqlconf_maps.ctx_id = pstrdup(sqlconf_pool, *uri);
 
     *uri = tmp2 + 1;
     if (strncmp(*uri, "where=", 6) == 0) {
@@ -495,9 +495,9 @@ static int sqlconf_parse_uri_map(char **uri) {
 /* Expected format of the URI:
  *
  * sql://dbuser:dbpass@dbserver[:dbport]/db:<name>\
- *   /ctxt:<table>[:id,parent_id,key,value][:where=<clause>]\
+ *   /ctx:<table>[:id,parent_id,key,value][:where=<clause>]\
  *   /conf:<table>[:id,key,value][:where=<clause>]\
- *   /map:<table>[:conf_id,ctxt_id][:where=<clause>]\
+ *   /map:<table>[:conf_id,ctx_id][:where=<clause>]\
  *   [/base_id=<name>]
  */
 static int sqlconf_parse_uri(char *uri) {
@@ -518,24 +518,24 @@ static int sqlconf_parse_uri(char *uri) {
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.database: '%s'",
     sqlconf_db.database);
 
-  if (sqlconf_parse_uri_ctxt(&uri) < 0) {
+  if (sqlconf_parse_uri_ctx(&uri) < 0) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing context table portion of URI");
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.tab: '%s'",
-    sqlconf_ctxts.tab);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.id: '%s'",
-    sqlconf_ctxts.id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.parent_id: '%s'",
-    sqlconf_ctxts.parent_id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.key: '%s'",
-    sqlconf_ctxts.key);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.value: '%s'",
-    sqlconf_ctxts.value);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxt.where: '%s'",
-    sqlconf_ctxts.where ? sqlconf_ctxts.where : "(none)");
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.tab: '%s'",
+    sqlconf_ctxs.tab);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id: '%s'",
+    sqlconf_ctxs.id);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id: '%s'",
+    sqlconf_ctxs.parent_id);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key: '%s'",
+    sqlconf_ctxs.key);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value: '%s'",
+    sqlconf_ctxs.value);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where: '%s'",
+    sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
   if (sqlconf_parse_uri_conf(&uri) < 0) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
@@ -564,8 +564,8 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_maps.tab);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id: '%s'",
     sqlconf_maps.conf_id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctxt_id: '%s'",
-    sqlconf_maps.ctxt_id);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id: '%s'",
+    sqlconf_maps.ctx_id);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.where: '%s'",
     sqlconf_maps.where ? sqlconf_maps.where : "(none)");
 
@@ -584,9 +584,9 @@ static int sqlconf_parse_uri(char *uri) {
     }
 
     uri += 8;
-    sqlconf_ctxts.base_id = pstrdup(sqlconf_pool, uri);
-    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxts.base_id: '%s'",
-      sqlconf_ctxts.base_id);
+    sqlconf_ctxs.base_id = pstrdup(sqlconf_pool, uri);
+    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id: '%s'",
+      sqlconf_ctxs.base_id);
   }
 
   return 0;
@@ -648,7 +648,7 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
 /* Database-reading routines
  */
 
-static int sqlconf_read_ctxt_ctxts(pool *p, int ctxt_id) {
+static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
   sql_data_t *sd = NULL;
@@ -657,19 +657,19 @@ static int sqlconf_read_ctxt_ctxts(pool *p, int ctxt_id) {
   register unsigned int i = 0;
   char idstr[64] = {'\0'};
 
-  snprintf(idstr, sizeof(idstr)-1, "%d", ctxt_id);
+  snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
-  if (!sqlconf_ctxts.where) {
-    where = pstrcat(p, sqlconf_ctxts.parent_id, " = ", idstr, NULL);
+  if (!sqlconf_ctxs.where) {
+    where = pstrcat(p, sqlconf_ctxs.parent_id, " = ", idstr, NULL);
 
   } else {
-    where = pstrcat(p, sqlconf_ctxts.parent_id, " = ", idstr, " AND ",
-      sqlconf_ctxts.where, NULL);
+    where = pstrcat(p, sqlconf_ctxs.parent_id, " = ", idstr, " AND ",
+      sqlconf_ctxs.where, NULL);
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxts.tab,
-    sqlconf_ctxts.id, where);
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
+    sqlconf_ctxs.id, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res)
@@ -678,13 +678,13 @@ static int sqlconf_read_ctxt_ctxts(pool *p, int ctxt_id) {
   sd = res->data;
 
   for (i = 0; i < sd->rnum; i++) {
-    sqlconf_read_ctxt(p, atoi(sd->data[i]), FALSE);
+    sqlconf_read_ctx(p, atoi(sd->data[i]), FALSE);
   }
 
   return 0;
 }
 
-static int sqlconf_read_conf(pool *p, int ctxt_id) {
+static int sqlconf_read_conf(pool *p, int ctx_id) {
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
   sql_data_t *sd = NULL;
@@ -693,7 +693,7 @@ static int sqlconf_read_conf(pool *p, int ctxt_id) {
   register unsigned int i = 0;
   char idstr[64] = {'\0'};
 
-  snprintf(idstr, sizeof(idstr)-1, "%d", ctxt_id);
+  snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
   if (!sqlconf_confs.where) {
@@ -701,14 +701,14 @@ static int sqlconf_read_conf(pool *p, int ctxt_id) {
       " FROM ", sqlconf_confs.tab, " INNER JOIN ", sqlconf_maps.tab,
       " ON ", sqlconf_confs.tab, ".", sqlconf_confs.id, " = ",
       sqlconf_maps.tab, ".", sqlconf_maps.conf_id, " WHERE ",
-      sqlconf_maps.tab, ".", sqlconf_maps.ctxt_id, " = ", idstr, NULL);
+      sqlconf_maps.tab, ".", sqlconf_maps.ctx_id, " = ", idstr, NULL);
 
   } else {
     query = pstrcat(p, sqlconf_confs.key, ", ", sqlconf_confs.value,
       " FROM ", sqlconf_confs.tab, " INNER JOIN ", sqlconf_maps.tab,
       " ON ", sqlconf_confs.tab, ".", sqlconf_confs.id, " = ",
       sqlconf_maps.tab, ".", sqlconf_maps.conf_id, " WHERE ",
-      sqlconf_maps.tab, ".", sqlconf_maps.ctxt_id, " = ", idstr,
+      sqlconf_maps.tab, ".", sqlconf_maps.ctx_id, " = ", idstr,
       " AND ", sqlconf_confs.where, NULL);
   }
 
@@ -729,34 +729,34 @@ static int sqlconf_read_conf(pool *p, int ctxt_id) {
   return 0;
 }
 
-static int sqlconf_read_ctxt(pool *p, int ctxt_id, int isbase) {
+static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
   sql_data_t *sd = NULL;
   char *where = NULL;
 
   char idstr[64] = {'\0'};
-  char *ctxt_key = NULL, *ctxt_val = NULL;
+  char *ctx_key = NULL, *ctx_val = NULL;
 
-  snprintf(idstr, sizeof(idstr)-1, "%d", ctxt_id);
+  snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
-  if (!sqlconf_ctxts.where) {
-    where = pstrcat(p, sqlconf_ctxts.id, " = ", idstr, NULL);
+  if (!sqlconf_ctxs.where) {
+    where = pstrcat(p, sqlconf_ctxs.id, " = ", idstr, NULL);
 
   } else {
-    where = pstrcat(p, sqlconf_ctxts.id, " = ", idstr, " AND ",
-      sqlconf_ctxts.where, NULL);
+    where = pstrcat(p, sqlconf_ctxs.id, " = ", idstr, " AND ",
+      sqlconf_ctxs.where, NULL);
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxts.tab,
-    pstrcat(p, sqlconf_ctxts.key, ", ", sqlconf_ctxts.value, NULL),
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
+    pstrcat(p, sqlconf_ctxs.key, ", ", sqlconf_ctxs.value, NULL),
     where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res) {
     pr_log_debug(DEBUG4, MOD_CONF_SQL_VERSION
-      ": notice: context ID (%d) has no associated key/value", ctxt_id);
+      ": notice: context ID (%d) has no associated key/value", ctx_id);
     return -1;
   }
 
@@ -765,29 +765,29 @@ static int sqlconf_read_ctxt(pool *p, int ctxt_id, int isbase) {
   if (sd->rnum > 1) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error: multiple key/values returned for given context ID (%d)",
-      ctxt_id);
+      ctx_id);
     return -1;
   }
 
-  ctxt_key = sd->data[0];
-  ctxt_val = sd->data[1];
+  ctx_key = sd->data[0];
+  ctx_val = sd->data[1];
 
-  if (ctxt_key &&
+  if (ctx_key &&
       !isbase) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_pool, "<",
-      ctxt_key, ctxt_val ? " " : "", ctxt_val ? ctxt_val : "", ">\n", NULL);
+      ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
   }
 
-  if (sqlconf_read_conf(p, ctxt_id) < 0)
+  if (sqlconf_read_conf(p, ctx_id) < 0)
     return -1;
 
-  if (sqlconf_read_ctxt_ctxts(p, ctxt_id) < 0)
+  if (sqlconf_read_ctx_ctxs(p, ctx_id) < 0)
     return -1;
 
-  if (ctxt_key &&
+  if (ctx_key &&
       !isbase) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_pool, "</",
-      ctxt_key, ">\n", NULL);
+      ctx_key, ">\n", NULL);
   }
 
   return 0;
@@ -842,17 +842,17 @@ static int sqlconf_read_db(pool *p) {
    * look for the ID of the context with that name, otherwise, look for the
    * context whose ID is NULL.
    */
-  if (!sqlconf_ctxts.base_id) {
-    where = pstrcat(p, sqlconf_ctxts.parent_id, " IS NULL", NULL);
+  if (!sqlconf_ctxs.base_id) {
+    where = pstrcat(p, sqlconf_ctxs.parent_id, " IS NULL", NULL);
     which_id = "default";
 
   } else {
-    where = pstrcat(p, sqlconf_ctxts.id, " = ", sqlconf_ctxts.base_id, NULL);
+    where = pstrcat(p, sqlconf_ctxs.id, " = ", sqlconf_ctxs.base_id, NULL);
     which_id = "base";
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxts.tab,
-    sqlconf_ctxts.id, where);
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
+    sqlconf_ctxs.id, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res) {
@@ -887,7 +887,7 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   sqlconf_conf = make_array(sqlconf_pool, 1, sizeof(char *));
-  sqlconf_read_ctxt(p, id, TRUE);
+  sqlconf_read_ctx(p, id, TRUE);
 
   /* Close the connection. */
   cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
