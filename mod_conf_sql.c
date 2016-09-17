@@ -33,43 +33,49 @@
 # error "ProFTPD 1.3.0rc1 or later required"
 #endif
 
-#define MOD_CONF_SQL_VERSION	"mod_conf_sql/0.7.1"
+#define MOD_CONF_SQL_VERSION	"mod_conf_sql/0.8"
+
+/* Fake fd number for FSIO needs. */
+#define CONF_SQL_FILENO		2746
 
 struct {
-  char *user;
-  char *pass;
-  char *server;
-  char *database;
+  const char *user;
+  const char *pass;
+  const char *server;
+  const char *database;
 
 } sqlconf_db;
 
 struct {
-  char *tab;
-  char *id;
+  const char *tab;
+  const char *id;
 
-  char *parent_id;
-  char *key;
-  char *value;
+  const char *parent_id;
+  const char *key;
+  const char *value;
 
-  char *where;
-  char *base_id;
+  const char *where;
+  const char *base_id;
+
 } sqlconf_ctxs;
 
 struct {
-  char *tab;
-  char *id;
-  char *key;
-  char *value;
+  const char *tab;
+  const char *id;
+  const char *key;
+  const char *value;
 
-  char *where;
+  const char *where;
+
 } sqlconf_confs;
 
 struct {
-  char *tab;
-  char *conf_id;
-  char *ctx_id;
+  const char *tab;
+  const char *conf_id;
+  const char *ctx_id;
 
-  char *where;
+  const char *where;
+
 } sqlconf_maps;
 
 #define SQLCONF_DEFAULT_CONF_ID_NAME    "conf_id"
@@ -93,68 +99,78 @@ static void sqlconf_register(void);
  */
 
 static int sqlconf_parse_uri_db(char **uri) {
-  char *tmp = NULL;
+  char *ptr = NULL;
 
-  tmp = strchr(*uri, ':');
-  if (tmp == NULL) {
+  ptr = strchr(*uri, ':');
+  if (ptr == NULL) {
+    /* Note: What if no user/password are provided/needed for the database
+     * in question, e.g. SQLite?
+     */
+
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": URI missing required username/password");
     errno = EINVAL;
     return -1;
   }
 
-  *tmp = '\0';
+  *ptr = '\0';
   sqlconf_db.user = pstrdup(sqlconf_pool, *uri);
 
   /* Advance past the given db user. */
-  *uri = tmp + 1;
+  *uri = ptr + 1;
 
-  tmp = strchr(*uri, '@');
-  if (tmp == NULL) {
+  ptr = strchr(*uri, '@');
+  if (ptr == NULL) {
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": URI missing required server information");
     errno = EINVAL;
     return -1;
   }
 
-  *tmp = '\0';
+  *ptr = '\0';
   sqlconf_db.pass = pstrdup(sqlconf_pool, *uri); 
 
   /* Advance past the given db passwd. */
-  *uri = tmp + 1;
+  *uri = ptr + 1;
 
-  tmp = strchr(*uri, '/');
-  if (tmp == NULL) {
-    errno = EINVAL;
-    return -1;
+  ptr = strchr(*uri, '?');
+  if (ptr == NULL) {
+    sqlconf_db.server = pstrdup(sqlconf_pool, *uri);
+    return 0;
   }
 
-  *tmp = '\0';
+  *ptr = '\0';
   sqlconf_db.server = pstrdup(sqlconf_pool, *uri);
 
-  /* Advance past the given server info. */
-  *uri = tmp + 1;
+  /* Advance past the given server info.  We should now be in the portion
+   * of the URI which uses query parameter formatting.
+   */
+  *uri = ptr + 1;
 
-  tmp = strchr(*uri, ':');
-  if (tmp == NULL) {
+  ptr = strchr(*uri, '=');
+  if (ptr == NULL) {
     errno = EINVAL;
     return -1;
   }
 
-  *tmp = '\0';
+  *ptr = '\0';
   if (strcmp(*uri, "db") != 0) {
     errno = EINVAL;
     return -1;
   }
 
-  *uri = tmp + 1;
+  *uri = ptr + 1;
 
-  tmp = strchr(*uri, '/');
-  if (tmp == NULL) {
+  ptr = strchr(*uri, '/');
+  if (ptr == NULL) {
     errno = EINVAL;
     return -1;
   }
 
-  *tmp = '\0';
+  *ptr = '\0';
   sqlconf_db.database = pstrdup(sqlconf_pool, *uri);
 
-  *uri = tmp + 1;
+  *uri = ptr + 1;
   return 0;
 }
 
@@ -506,8 +522,12 @@ static int sqlconf_parse_uri(char *uri) {
   uri += 6;
 
   if (sqlconf_parse_uri_db(&uri) < 0) {
+    int xerrno = errno;
+
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing connect portion of URI");
+      ": failed parsing connect portion of URI: %s", strerror(xerrno));
+
+    errno = xerrno;
     return -1;
   }
 
@@ -519,8 +539,12 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_db.database);
 
   if (sqlconf_parse_uri_ctx(&uri) < 0) {
+    int xerrno = errno;
+
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing context table portion of URI");
+      ": failed parsing context table portion of URI: %s", strerror(xerrno));
+
+    errno = xerrno;
     return -1;
   }
 
@@ -538,8 +562,12 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
   if (sqlconf_parse_uri_conf(&uri) < 0) {
+    int xerrno = errno;
+
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing directive table portion of URI");
+      ": failed parsing directive table portion of URI: %s", strerror(xerrno));
+
+    errno = xerrno;
     return -1;
   }
 
@@ -555,8 +583,12 @@ static int sqlconf_parse_uri(char *uri) {
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
   if (sqlconf_parse_uri_map(&uri) < 0) {
+    int xerrno = errno;
+
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing map table portion of URI");
+      ": failed parsing map table portion of URI: %s", strerror(xerrno));
+
+    errno = xerrno;
     return -1;
   }
 
@@ -660,7 +692,7 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
   snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
-  if (!sqlconf_ctxs.where) {
+  if (sqlconf_ctxs.where == NULL) {
     where = pstrcat(p, sqlconf_ctxs.parent_id, " = ", idstr, NULL);
 
   } else {
@@ -696,7 +728,7 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
-  if (!sqlconf_confs.where) {
+  if (sqlconf_confs.where == NULL) {
     query = pstrcat(p, sqlconf_confs.key, ", ", sqlconf_confs.value,
       " FROM ", sqlconf_confs.tab, " INNER JOIN ", sqlconf_maps.tab,
       " ON ", sqlconf_confs.tab, ".", sqlconf_confs.id, " = ",
@@ -721,8 +753,10 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   sd = res->data;
 
   for (i = 0; i < sd->rnum; i++) {
-    char *str = pstrcat(sqlconf_pool,
-      sd->data[(i * sd->fnum)], " ", sd->data[(i * sd->fnum) + 1], "\n", NULL);
+    char *str;
+
+    str = pstrcat(sqlconf_pool, sd->data[(i * sd->fnum)], " ",
+      sd->data[(i * sd->fnum) + 1], "\n", NULL);
     *((char **) push_array(sqlconf_conf)) = str;
   }
 
@@ -741,7 +775,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
 
-  if (!sqlconf_ctxs.where) {
+  if (sqlconf_ctxs.where == NULL) {
     where = pstrcat(p, sqlconf_ctxs.id, " = ", idstr, NULL);
 
   } else {
@@ -757,6 +791,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   if (!res) {
     pr_log_debug(DEBUG4, MOD_CONF_SQL_VERSION
       ": notice: context ID (%d) has no associated key/value", ctx_id);
+    errno = ENOENT;
     return -1;
   }
 
@@ -766,6 +801,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error: multiple key/values returned for given context ID (%d)",
       ctx_id);
+    errno = EINVAL;
     return -1;
   }
 
@@ -778,11 +814,13 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
       ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
   }
 
-  if (sqlconf_read_conf(p, ctx_id) < 0)
+  if (sqlconf_read_conf(p, ctx_id) < 0) {
     return -1;
+  }
 
-  if (sqlconf_read_ctx_ctxs(p, ctx_id) < 0)
+  if (sqlconf_read_ctx_ctxs(p, ctx_id) < 0) {
     return -1;
+  }
 
   if (ctx_key &&
       !isbase) {
@@ -842,7 +880,7 @@ static int sqlconf_read_db(pool *p) {
    * look for the ID of the context with that name, otherwise, look for the
    * context whose ID is NULL.
    */
-  if (!sqlconf_ctxs.base_id) {
+  if (sqlconf_ctxs.base_id == NULL) {
     where = pstrcat(p, sqlconf_ctxs.parent_id, " IS NULL", NULL);
     which_id = "default";
 
@@ -931,11 +969,12 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
     char *uri = pstrdup(sqlconf_pool, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
-    if (sqlconf_parse_uri(uri) < 0)
+    if (sqlconf_parse_uri(uri) < 0) {
       return -1;
+    }
 
     /* Return a fake file descriptor. */
-    return 2476;
+    return CONF_SQL_FILENO;
   }
 
   /* Default normal open. */
