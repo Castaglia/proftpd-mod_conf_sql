@@ -24,6 +24,16 @@ GetOptions($opts, 'add-conf', 'conf-tab=s', 'ctx-prefix=s', 'ctx-tab=s',
 usage() if $opts->{help};
 
 die "$program: missing --dbdriver option\n" unless defined($opts->{dbdriver});
+if ($opts->{dbdriver} =~ /sqlite/i) {
+  $opts->{dbdriver} = 'SQLite';
+
+} elsif ($opts->{dbdriver} =~ /mysql/i) {
+  $opts->{dbdriver} = 'mysql';
+
+} elsif ($opts->{dbdriver} =~ /postgres/i) {
+  $opts->{dbdriver} = 'Pg';
+}
+
 die "$program: missing --dbname option\n" unless defined($opts->{dbname});
 
 # We need a database handle.
