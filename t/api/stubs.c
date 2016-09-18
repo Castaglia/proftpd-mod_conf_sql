@@ -85,4 +85,6 @@ int pr_trace_msg(const char *trace_channel, int level, const char *fmt, ...) {
 
     fprintf(stderr, "\n");
   }
+
+  return 0;
 }

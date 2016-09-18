@@ -36,6 +36,6 @@
  *   [&base_id=<name>]
  */
 int sqlconf_uri_parse(pool *p, const char *uri, char **host, unsigned int *port,
-  char **username, char **password, pr_table_t *params);
+  char **path, char **username, char **password, pr_table_t *params);
 
 #endif /* MOD_CONF_SQL_URI_H */

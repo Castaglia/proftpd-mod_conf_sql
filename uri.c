@@ -38,6 +38,8 @@ static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
    * in the URI.
    */
   if (uri[0] == '[') {
+    size_t urilen;
+
     ptr = strchr(uri + 1, ']');
     if (ptr == NULL) {
       /* If there is no ']', then it's a badly-formatted URI. */
@@ -49,16 +51,12 @@ static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
 
     host = pstrndup(p, uri + 1, ptr - uri - 1);
 
-    if (remaining != NULL) {
-      size_t urilen;
-      urilen = strlen(ptr);
+    urilen = strlen(ptr);
+    if (urilen > 0) {
+      *remaining = ptr + 1;
 
-      if (urilen > 0) {
-        *remaining = ptr + 1;
-
-      } else {
-        *remaining = NULL;
-      }
+    } else {
+      *remaining = NULL;
     }
 
     return host;
@@ -66,42 +64,58 @@ static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
 
   ptr = strchr(uri + 1, ':');
   if (ptr == NULL) {
-    if (remaining != NULL) {
+    /* IFF the host starts with a slash, THEN intepret the host as an
+     * absolute path (e.g. for an SQLite database).  Otherwise, look for a
+     * slash as the start of a path in the URI.
+     */
+
+    if (uri[0] == '/') {
       *remaining = NULL;
+      host = pstrdup(p, uri);
+
+      return host;
     }
 
-    host = pstrdup(p, uri);
-    return host;
+    ptr = strchr(uri, '/');
+    if (ptr == NULL) {
+      *remaining = NULL;
+      host = pstrdup(p, uri);
+
+      return host;
+    }
   }
 
-  if (remaining != NULL) {
-    *remaining = ptr;
-  }
+  *remaining = ptr;
 
   host = pstrndup(p, uri, ptr - uri);
   return host;
 }
 
 static int uri_parse_port(pool *p, const char *orig_uri, const char *uri,
-    unsigned int *port) {
+    unsigned int *port, char **remaining) {
   register unsigned int i;
-  char *ptr, *ptr2, *portspec;
+  char *ptr, *portspec;
   size_t portspeclen;
 
   /* Look for any possible trailing '/'. */
   ptr = strchr(uri, '/');
   if (ptr == NULL) {
-    portspec = ptr + 1;
+    portspec = ((char *) uri) + 1;
     portspeclen = strlen(portspec);
+    *remaining = NULL;
 
   } else {
-    portspeclen = uri - (ptr + 1);
-    portspec = pstrndup(p, ptr + 1, portspeclen);
+    portspeclen = ptr - (uri + 1);
+
+    *ptr = '\0';
+    portspec = pstrndup(p, ((char *) uri) + 1, portspeclen);
+    *ptr = '/';
+    *remaining = ptr;
   }
 
   /* Ensure that only numeric characters appear in the portspec. */
   for (i = 0; i < portspeclen; i++) {
-    if (isdigit((int) portspec[i]) == 0) {
+    if (PR_ISDIGIT((int) portspec[i]) == 0) {
       pr_log_debug(DEBUG2, MOD_CONF_SQL_VERSION
         ": invalid character (%c) at index %d in port specification '%.100s'",
         portspec[i], i, portspec);
@@ -219,36 +233,157 @@ static char *uri_parse_userinfo(pool *p, const char *orig_uri,
   return rem_uri;
 }
 
+static int uri_parse_kv(pool *p, const char *uri, char *kv, size_t kvlen,
+  char **k, size_t *klen, char **v, size_t *vlen) {
+  char *ptr;
+
+  ptr = memchr(kv, '=', kvlen);
+  if (ptr == NULL) {
+    pr_log_debug(DEBUG1, MOD_CONF_SQL_VERSION
+      ": badly formatted query parameter '%.*s' in URI '%.100s'", (int) kvlen,
+      kv, uri);
+    errno = EINVAL;
+    return -1;
+  }
+
+  *klen = ptr - kv;
+  *k = pstrndup(p, kv, *klen);
+
+  *vlen = kvlen - *klen - 1;
+  *v = pstrndup(p, ptr + 1, *vlen);
+
+  return 0;
+}
+
+static int uri_store_kv(pool *p, const char *uri, pr_table_t *params,
+    char *k, size_t klen, char *v, size_t vlen) {
+  int res;
+
+  v = pstrndup(p, v, vlen);
+
+  if (pr_table_count(params) == 0 ||
+      pr_table_kexists(params, k, klen) == 0) {
+    k = pstrndup(p, k, klen);
+    res = pr_table_kadd(params, k, klen, v, vlen);
+
+  } else {
+    res = pr_table_kset(params, k, klen, v, vlen);
+  }
+
+  if (res < 0) {
+    int xerrno = errno;
+
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error stashing '%.*s=%.*s' from URI '%.100s': %s", (int) klen, k,
+      (int) vlen, v, uri, strerror(xerrno));
+
+    errno = xerrno;
+    return -1;
+  }
+
+  return 0;
+}
+
 static int uri_parse_params(pool *p, const char *orig_uri, const char *uri,
     pr_table_t *params) {
-  errno = ENOSYS;
-  return -1;
+  int res;
+  char *k, *v, *query_string, *ptr;
+  size_t klen = 0, vlen = 0, kvlen, query_stringlen;
+  pool *sub_pool;
+
+  sub_pool = make_sub_pool(p);
+  pr_pool_tag(sub_pool, "URI parameter pool");
+
+  query_stringlen = strlen(uri);
+  query_string = pstrndup(sub_pool, uri, query_stringlen);
+
+  ptr = memchr(query_string, '&', query_stringlen);
+  while (ptr != NULL) {
+    pr_signals_handle();
+
+    k = v = NULL;
+    kvlen = vlen = 0;
+
+    kvlen = ptr - query_string;
+    res = uri_parse_kv(sub_pool, orig_uri, query_string, kvlen,
+      &k, &klen, &v, &vlen);
+    if (res < 0) {
+      /* Malformed "key=val" string. */
+      destroy_pool(sub_pool);
+      errno = EINVAL;
+      return -1;
+    }
+
+    res = uri_store_kv(p, orig_uri, params, k, klen, v, vlen);
+    if (res < 0) {
+      int xerrno = errno;
+
+      destroy_pool(sub_pool);
+      errno = xerrno;
+      return -1;
+    }
+
+    query_string = ptr + 1;
+    ptr = strchr(query_string, '&');
+  }
+
+  k = v = NULL;
+  klen = vlen = 0;
+
+  res = uri_parse_kv(sub_pool, orig_uri, query_string, query_stringlen,
+    &k, &klen, &v, &vlen);
+  if (res < 0) {
+    /* Malformed "key=val" string. */
+    destroy_pool(sub_pool);
+    errno = EINVAL;
+    return -1;
+  }
+
+  res = uri_store_kv(p, orig_uri, params, k, klen, v, vlen);
+  if (res < 0) {
+    int xerrno = errno;
+
+    destroy_pool(sub_pool);
+    errno = xerrno;
+    return -1;
+  }
+
+  /* Warn about unknown/unsupported keys, but do NOT error on them! */
+
+  destroy_pool(sub_pool);
+  return 0;
 }
 
 int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
-    unsigned int *port, char **username, char **password, pr_table_t *params) {
+    unsigned int *port, char **path, char **username, char **password,
+    pr_table_t *params) {
   pool *sub_pool;
-  char *ptr, *ptr2, *uri;
+  char *ptr, *ptr2 = NULL, *uri;
   size_t len;
 
   if (p == NULL ||
-      uri == NULL ||
+      orig_uri == NULL ||
+      host == NULL ||
+      port == NULL ||
+      path == NULL ||
+      username == NULL ||
+      password == NULL ||
       params == NULL) {
     errno = EINVAL;
     return -1;
   }
 
-  len = strlen(uri);
+  len = strlen(orig_uri);
   if (len < 7) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": unknown/unsupported scheme in URI '%.100s'", uri);
+      ": unknown/unsupported scheme in URI '%.100s'", orig_uri);
     errno = EINVAL;
     return -1;
   }
 
-  if (strncmp(uri, "sql://", 6) != 0) {
+  if (strncmp(orig_uri, "sql://", 6) != 0) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": unknown/unsupported scheme in URI '%.100s'", uri);
+      ": unknown/unsupported scheme in URI '%.100s'", orig_uri);
     errno = EINVAL;
     return -1;
   }
@@ -279,7 +414,7 @@ int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
 
   ptr = strchr(uri, '?');
   if (ptr != NULL) {
-    if (uri_parse_params(sub_pool, uri, ptr + 1, params) < 0) {
+    if (uri_parse_params(p, uri, ptr + 1, params) < 0) {
       int xerrno = errno;
 
       destroy_pool(sub_pool);
@@ -292,27 +427,32 @@ int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
 
   /* Note: Will we want/need to support URL-encoded characters in the future? */
 
-  ptr = uri_parse_userinfo(sub_pool, uri, ptr, username, password);
+  ptr = uri_parse_userinfo(sub_pool, uri, uri, username, password);
 
-  ptr2 = strchr(ptr, ':');
-  if (ptr2 == NULL) {
-    *host = uri_parse_host(sub_pool, uri, ptr, NULL);
+  *host = uri_parse_host(sub_pool, uri, ptr, &ptr2);
+  if (*host == NULL) {
+    int xerrno = errno;
 
-  } else {
-    *host = uri_parse_host(sub_pool, uri, ptr, &ptr2);
+    destroy_pool(sub_pool);
+    errno = xerrno;
+    return -1;
   }
 
   /* Optional port field present? */
   if (ptr2 != NULL) {
-    ptr2 = strchr(ptr2, ':');
-    if (ptr2 != NULL) {
-      if (uri_parse_port(sub_pool, uri, ptr2, port) < 0) {
+    ptr = strchr(ptr2, ':');
+    if (ptr != NULL) {
+      if (uri_parse_port(sub_pool, uri, ptr, port, &ptr2) < 0) {
         int xerrno = errno;
 
         destroy_pool(sub_pool);
         errno = xerrno;
         return -1;
       }
+    }
+
+    if (ptr2 != NULL) {
+      *path = pstrdup(p, ptr2);
     }
   }
 
