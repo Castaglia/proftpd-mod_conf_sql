@@ -30,6 +30,7 @@
 #include "mod_conf_sql.h"
 
 #include "uri.h"
+#include "param.h"
 
 #ifdef HAVE_CHECK_H
 # include <check.h>
@@ -38,6 +39,7 @@
 #endif
 
 Suite *tests_get_uri_suite(void);
+Suite *tests_get_param_suite(void);
 
 unsigned int recvd_signal_flags;
 extern pid_t mpid;

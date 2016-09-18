@@ -12,10 +12,12 @@ VPATH=@srcdir@
 
 MODULE_NAME=mod_conf_sql
 MODULE_OBJS=mod_conf_sql.o \
-  uri.o
+  uri.o \
+  param.o
 
 SHARED_MODULE_OBJS=mod_conf_sql.lo \
-  uri.lo
+  uri.lo \
+  param.lo
 
 # Necessary redefinitions
 INCLUDES=-I. -I./include -I../.. -I../../include @INCLUDES@

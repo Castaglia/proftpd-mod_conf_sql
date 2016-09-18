@@ -23,29 +23,34 @@
  *
  * This is mod_conf_sql, contrib software for proftpd 1.2 and above.
  * For more information contact TJ Saunders <tj@castaglia.org>.
+ *
+ * -----DO NOT EDIT BELOW THIS LINE-----
+ * $Archive: mod_conf_sql.a$
  */
 
 #include "mod_conf_sql.h"
 #include "mod_sql.h"
+#include "uri.h"
+#include "param.h"
 
 /* Fake fd number for FSIO needs. */
 #define CONF_SQL_FILENO		2746
 
 struct {
-  const char *user;
-  const char *pass;
+  const char *username;
+  const char *password;
   const char *server;
   const char *database;
 
 } sqlconf_db;
 
 struct {
-  const char *tab;
-  const char *id;
+  const char *table;
+  const char *id_col;
 
-  const char *parent_id;
-  const char *key;
-  const char *value;
+  const char *parent_id_col;
+  const char *key_col;
+  const char *value_col;
 
   const char *where;
   const char *base_id;
@@ -53,19 +58,19 @@ struct {
 } sqlconf_ctxs;
 
 struct {
-  const char *tab;
-  const char *id;
-  const char *key;
-  const char *value;
+  const char *table;
+  const char *id_col;
+  const char *key_col;
+  const char *value_col;
 
   const char *where;
 
 } sqlconf_confs;
 
 struct {
-  const char *tab;
-  const char *conf_id;
-  const char *ctx_id;
+  const char *table;
+  const char *conf_id_col;
+  const char *ctx_id_col;
 
   const char *where;
 
@@ -88,532 +93,264 @@ static unsigned int sqlconf_confi = 0;
 static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase);
 static void sqlconf_register(void);
 
-/* URI parsing routines
- */
-
-static int sqlconf_parse_uri_db(char **uri) {
-  char *ptr = NULL;
-
-  ptr = strchr(*uri, ':');
-  if (ptr == NULL) {
-    /* Note: What if no user/password are provided/needed for the database
-     * in question, e.g. SQLite?
-     */
-
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": URI missing required username/password");
-    errno = EINVAL;
-    return -1;
-  }
-
-  *ptr = '\0';
-  sqlconf_db.user = pstrdup(conf_sql_pool, *uri);
-
-  /* Advance past the given db user. */
-  *uri = ptr + 1;
-
-  ptr = strchr(*uri, '@');
-  if (ptr == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": URI missing required server information");
-    errno = EINVAL;
-    return -1;
-  }
-
-  *ptr = '\0';
-  sqlconf_db.pass = pstrdup(conf_sql_pool, *uri); 
-
-  /* Advance past the given db passwd. */
-  *uri = ptr + 1;
-
-  ptr = strchr(*uri, '?');
-  if (ptr == NULL) {
-    sqlconf_db.server = pstrdup(conf_sql_pool, *uri);
-    return 0;
-  }
-
-  *ptr = '\0';
-  sqlconf_db.server = pstrdup(conf_sql_pool, *uri);
-
-  /* Advance past the given server info.  We should now be in the portion
-   * of the URI which uses query parameter formatting.
-   */
-  *uri = ptr + 1;
-
-  ptr = strchr(*uri, '=');
-  if (ptr == NULL) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  *ptr = '\0';
-  if (strcmp(*uri, "db") != 0) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  *uri = ptr + 1;
-
-  ptr = strchr(*uri, '/');
-  if (ptr == NULL) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  *ptr = '\0';
-  sqlconf_db.database = pstrdup(conf_sql_pool, *uri);
-
-  *uri = ptr + 1;
-  return 0;
-}
-
-static int sqlconf_parse_uri_ctx(char **uri) {
-  char *tmp = NULL, *tmp2 = NULL;
-
-  if (strncmp(*uri, "ctx:", 4) != 0) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  *uri += 5;
-
-  tmp = strchr(*uri, '/');
-  if (tmp == NULL) {
-    errno = EINVAL;
-    return -1;
-  }
+static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
+  int res;
+  char *table, *id_col, *parent_id_col, *key_col, *value_col, *where;
 
   /* Defaults */
-  sqlconf_ctxs.id = SQLCONF_DEFAULT_ID_NAME;
-  sqlconf_ctxs.parent_id = SQLCONF_DEFAULT_PARENT_ID_NAME;
-  sqlconf_ctxs.key = SQLCONF_DEFAULT_KEY_NAME;
-  sqlconf_ctxs.value = SQLCONF_DEFAULT_VALUE_NAME;
+  sqlconf_ctxs.table = CONF_SQL_CTX_DEFAULT_TABLE_NAME;
+  sqlconf_ctxs.id_col = CONF_SQL_CTX_DEFAULT_ID_COL_NAME;
+  sqlconf_ctxs.parent_id_col = CONF_SQL_CTX_DEFAULT_PARENT_ID_COL_NAME;
+  sqlconf_ctxs.key_col = CONF_SQL_CTX_DEFAULT_KEY_COL_NAME;
+  sqlconf_ctxs.value_col = CONF_SQL_CTX_DEFAULT_VALUE_COL_NAME;
   sqlconf_ctxs.where = NULL;
 
-  *tmp = '\0';
+  table = id_col = parent_id_col = key_col = value_col = where = NULL;
 
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_ctxs.tab = pstrdup(conf_sql_pool, *uri);
-    *uri = tmp + 1;
-    return 0;
-  }
-
-  *tmp2 = '\0';
-  sqlconf_ctxs.tab = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-
-    /* At this point, it's possible that the URI is specifying a WHERE clause,
-     * so that it looks like:
-     *
-     *  ctx:where=foo
-     *
-     * So, check for a '=' character here.
-     */
-
-    tmp2 = strchr(*uri, '=');
-    if (tmp2 == NULL) {
-      errno = EINVAL;
-      return -1;
-
-    } else {
-
-      *tmp2 = '\0';
-
-      /* Make sure it's "where=". */
-      if (strcmp(*uri, "where") == 0) {
-        *uri = tmp2 + 1; 
-        sqlconf_ctxs.where = pstrdup(conf_sql_pool, *uri);
-
-        *uri = tmp + 1;
-        return 0;
-
-      } else {
-        errno = EINVAL;
-        return -1;
-      }
-    }
-  }
-
-  *tmp2 = '\0';
-  sqlconf_ctxs.id = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-    errno = EINVAL;
+  res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
+    &key_col, &value_col, &where);
+  if (res < 0) {
     return -1;
   }
 
-  *tmp2 = '\0';
-  sqlconf_ctxs.parent_id = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-    errno = EINVAL;
-    return -1;
+  if (table != NULL) {
+    sqlconf_ctxs.table = table;
   }
 
-  *tmp2 = '\0';
-  sqlconf_ctxs.key = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  /* Check for the optional "where=foo" URI syntax construct here. */
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_ctxs.value = pstrdup(conf_sql_pool, *uri);
-
-  } else {
-    *tmp2 = '\0';
-    sqlconf_ctxs.value = pstrdup(conf_sql_pool, *uri);
-
-    *uri = tmp2 + 1;
-    if (strncmp(*uri, "where=", 6) == 0) {
-      *uri += 6;
-      sqlconf_ctxs.where = pstrdup(conf_sql_pool, *uri);
-
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
+  if (id_col != NULL) {
+    sqlconf_ctxs.id_col = id_col;
   }
 
-  *uri = tmp + 1;
+  if (parent_id_col != NULL) {
+    sqlconf_ctxs.parent_id_col = parent_id_col;
+  }
+
+  if (key_col != NULL) {
+    sqlconf_ctxs.key_col = key_col;
+  }
+
+  if (value_col != NULL) {
+    sqlconf_ctxs.value_col = value_col;
+  }
+
+  if (where != NULL) {
+    sqlconf_ctxs.where = where;
+  }
+
   return 0;
 }
 
-static int sqlconf_parse_uri_conf(char **uri) {
-  char *tmp = NULL, *tmp2 = NULL;
-
-  if (strncmp(*uri, "conf:", 5) != 0) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  *uri += 5;
-
-  tmp = strchr(*uri, '/');
-  if (tmp == NULL) {
-    errno = EINVAL;
-    return -1;
-  }
+static int sqlconf_parse_conf_param(pool *p, pr_table_t *params) {
+  int res;
+  char *table, *id_col, *key_col, *value_col, *where;
 
   /* Defaults */
-  sqlconf_confs.id = SQLCONF_DEFAULT_ID_NAME;
-  sqlconf_confs.key = SQLCONF_DEFAULT_KEY_NAME;
-  sqlconf_confs.value = SQLCONF_DEFAULT_VALUE_NAME;
+  sqlconf_confs.table = CONF_SQL_CONF_DEFAULT_TABLE_NAME;
+  sqlconf_confs.id_col = CONF_SQL_CONF_DEFAULT_ID_COL_NAME;
+  sqlconf_confs.key_col = CONF_SQL_CONF_DEFAULT_KEY_COL_NAME;
+  sqlconf_confs.value_col = CONF_SQL_CONF_DEFAULT_VALUE_COL_NAME;
   sqlconf_confs.where = NULL;
 
-  *tmp = '\0';
+  table = id_col = key_col = value_col = where = NULL;
 
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_confs.tab = pstrdup(conf_sql_pool, *uri);
-    *uri = tmp + 1;
-    return 0;
-  }
-
-  *tmp2 = '\0';
-  sqlconf_confs.tab = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-
-    /* At this point, it's possible that the URI is specifying a WHERE clause,
-     * so that it looks like:
-     *
-     *  conf:where=foo
-     *
-     * So, check for a '=' character here.
-     */
-
-    tmp2 = strchr(*uri, '=');
-    if (tmp2 == NULL) {
-      errno = EINVAL;
-      return -1;
-
-    } else {
-
-      *tmp2 = '\0';
-
-      /* Make sure it's "where=". */
-      if (strcmp(*uri, "where") == 0) {
-        *uri = tmp2 + 1;
-        sqlconf_confs.where = pstrdup(conf_sql_pool, *uri);
-
-        *uri = tmp + 1;
-        return 0;
-
-      } else {
-        errno = EINVAL;
-        return -1;
-      }
-    }
-  }
-
-  *tmp2 = '\0';
-  sqlconf_confs.id = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-    errno = EINVAL;
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+    &value_col, &where);
+  if (res < 0) {
     return -1;
   }
 
-  *tmp2 = '\0';
-  sqlconf_confs.key = pstrdup(conf_sql_pool, *uri);
- 
-  *uri = tmp2 + 1;
-
-  /* Check for the optional "where=foo" URI syntax construct here. */
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_confs.value = pstrdup(conf_sql_pool, *uri);
-
-  } else {
-    *tmp2 = '\0';
-    sqlconf_confs.value = pstrdup(conf_sql_pool, *uri);
-
-    *uri = tmp2 + 1;
-    if (strncmp(*uri, "where=", 6) == 0) {
-      *uri += 6;
-      sqlconf_confs.where = pstrdup(conf_sql_pool, *uri);
-
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
+  if (table != NULL) {
+    sqlconf_confs.table = table;
   }
 
-  *uri = tmp + 1;
+  if (id_col != NULL) {
+    sqlconf_confs.id_col = id_col;
+  }
+
+  if (key_col != NULL) {
+    sqlconf_confs.key_col = key_col;
+  }
+
+  if (value_col != NULL) {
+    sqlconf_confs.value_col = value_col;
+  }
+
+  if (where != NULL) {
+    sqlconf_confs.where = where;
+  }
+
   return 0;
 }
 
-static int sqlconf_parse_uri_map(char **uri) {
-  char *tmp = NULL, *tmp2 = NULL;
+static int sqlconf_parse_map_param(pool *p, pr_table_t *params) {
+  int res;
+  char *table, *conf_id_col, *ctx_id_col, *where;
 
-  if (strncmp(*uri, "map:", 4) != 0) {
-    errno = EINVAL;
+  /* Defaults */
+  sqlconf_maps.table = CONF_SQL_MAP_DEFAULT_TABLE_NAME;
+  sqlconf_maps.conf_id_col = CONF_SQL_MAP_DEFAULT_CONF_ID_COL_NAME;
+  sqlconf_maps.ctx_id_col = CONF_SQL_MAP_DEFAULT_CTX_ID_COL_NAME;
+  sqlconf_confs.where = NULL;
+
+  table = conf_id_col = ctx_id_col = where = NULL;
+
+  res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
+    &where);
+  if (res < 0) {
     return -1;
   }
 
-  *uri += 4;
-
-  tmp = strchr(*uri, '/');
-  if (tmp != NULL)
-    *tmp = '\0';
-
-  /* Defaults */
-  sqlconf_maps.conf_id = SQLCONF_DEFAULT_CONF_ID_NAME;
-  sqlconf_maps.ctx_id = SQLCONF_DEFAULT_CTXT_ID_NAME;
-  sqlconf_maps.where = NULL;
-
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_maps.tab = pstrdup(conf_sql_pool, *uri);
-    *uri = tmp ? tmp + 1 : *uri + strlen(*uri);
-    return 0;
+  if (table != NULL) {
+    sqlconf_maps.table = table;
   }
 
-  *tmp2 = '\0';
-  sqlconf_maps.tab = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  tmp2 = strchr(*uri, ',');
-  if (tmp2 == NULL) {
-
-    /* At this point, it's possible that the URI is specifying a WHERE clause,
-     * so that it looks like:
-     *
-     *  map:where=foo
-     *
-     * So, check for a '=' character here.
-     */
-
-    tmp2 = strchr(*uri, '=');
-    if (tmp2 == NULL) {
-      errno = EINVAL;
-      return -1;
-
-    } else {
-
-      *tmp2 = '\0';
-
-      /* Make sure it's "where=". */
-      if (strcmp(*uri, "where") == 0) {
-        *uri = tmp2 + 1;
-        sqlconf_maps.where = pstrdup(conf_sql_pool, *uri);
-
-        *uri = tmp + 1;
-        *uri += strlen(*uri);
-        return 0;
-
-      } else {
-        errno = EINVAL;
-        return -1;
-      }
-    }
+  if (conf_id_col != NULL) {
+    sqlconf_maps.conf_id_col = conf_id_col;
   }
 
-  *tmp2 = '\0';
-  sqlconf_maps.conf_id = pstrdup(conf_sql_pool, *uri);
-
-  *uri = tmp2 + 1;
-
-  /* Check for the optional "where=foo" URI syntax construct here. */
-  tmp2 = strchr(*uri, ':');
-  if (tmp2 == NULL) {
-    sqlconf_maps.ctx_id = pstrdup(conf_sql_pool, *uri);
-
-  } else {
-    *tmp2 = '\0';
-    sqlconf_maps.ctx_id = pstrdup(conf_sql_pool, *uri);
-
-    *uri = tmp2 + 1;
-    if (strncmp(*uri, "where=", 6) == 0) {
-      *uri += 6;
-      sqlconf_maps.where = pstrdup(conf_sql_pool, *uri);
-
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
+  if (ctx_id_col != NULL) {
+    sqlconf_maps.ctx_id_col = ctx_id_col;
   }
 
-  if (tmp)
-    *uri = tmp + 1;
-  else
-    *uri += strlen(*uri);
+  if (where != NULL) {
+    sqlconf_maps.where = where;
+  }
 
   return 0;
 }
 
 /* Expected format of the URI:
  *
- * sql://dbuser:dbpass@dbserver[:dbport]/db:<name>\
- *   /ctx:<table>[:id,parent_id,key,value][:where=<clause>]\
- *   /conf:<table>[:id,key,value][:where=<clause>]\
- *   /map:<table>[:conf_id,ctx_id][:where=<clause>]\
- *   [/base_id=<name>]
+ * sql://dbuser:dbpass@dbserver[:dbport]/dbname?
+ *   [database=<dbname>]
+ *   &ctx:<table>[:id,parent_id,key,value][:where=<clause>]\
+ *   &conf:<table>[:id,key,value][:where=<clause>]\
+ *   &map:<table>[:conf_id,ctx_id][:where=<clause>]\
+ *   [&base_id=<name>]
  */
-static int sqlconf_parse_uri(char *uri) {
+static int sqlconf_parse_uri(pool *p, const char *uri) {
+  int res, xerrno;
+  char *host = NULL, *path = NULL, *username, *password;
+  unsigned int port = 0;
+  pr_table_t *params = NULL;
+  const void *v;
 
-  /* First, skip past the prefix.  6 is the strlen of "sql://". */
-  uri += 6;
+  params = pr_table_alloc(p, 1);
 
-  if (sqlconf_parse_uri_db(&uri) < 0) {
-    int xerrno = errno;
+  res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
+    params);
+  if (res < 0) {
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing connect portion of URI: %s", strerror(xerrno));
+      ": failed parsing connect portion of URI '%.100s': %s", uri,
+      strerror(xerrno));
 
+    pr_table_free(params);
     errno = xerrno;
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.user: '%s'",
-    sqlconf_db.user);
+  if (port != 0) {
+    char portnum[32];
+
+    memset(portnum, '\0', sizeof(portnum));
+    snprintf(portnum, sizeof(portnum)-1, "%u", port);
+    sqlconf_db.server = pstrcat(p, host, ":", portnum, NULL);
+
+  } else {
+    sqlconf_db.server = pstrdup(p, host);
+  }
+
+  sqlconf_db.username = pstrdup(p, username);
+  sqlconf_db.password = pstrdup(p, password);
+  sqlconf_db.database = pstrdup(p, path);
+
+  v = pr_table_get(params, "database", NULL);
+  if (v != NULL) {
+    sqlconf_db.database = v;
+  }
+
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.username: '%s'",
+    sqlconf_db.username);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.server: '%s'",
     sqlconf_db.server);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.database: '%s'",
     sqlconf_db.database);
 
-  if (sqlconf_parse_uri_ctx(&uri) < 0) {
+  if (sqlconf_parse_ctx_param(p, params) < 0) {
     int xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing context table portion of URI: %s", strerror(xerrno));
+      ": failed parsing context table portion of URI '%.100s': %s", uri,
+      strerror(xerrno));
 
     errno = xerrno;
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.tab: '%s'",
-    sqlconf_ctxs.tab);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id: '%s'",
-    sqlconf_ctxs.id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id: '%s'",
-    sqlconf_ctxs.parent_id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key: '%s'",
-    sqlconf_ctxs.key);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value: '%s'",
-    sqlconf_ctxs.value);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.table: '%s'",
+    sqlconf_ctxs.table);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col: '%s'",
+    sqlconf_ctxs.id_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col: '%s'",
+    sqlconf_ctxs.parent_id_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key_col: '%s'",
+    sqlconf_ctxs.key_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value_col: '%s'",
+    sqlconf_ctxs.value_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where: '%s'",
     sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
-  if (sqlconf_parse_uri_conf(&uri) < 0) {
+  if (sqlconf_parse_conf_param(p, params) < 0) {
     int xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing directive table portion of URI: %s", strerror(xerrno));
+      ": failed parsing directive table portion of URI '%.100s': %s", uri,
+      strerror(xerrno));
 
     errno = xerrno;
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.tab: '%s'",
-    sqlconf_confs.tab);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id: '%s'",
-    sqlconf_confs.id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key: '%s'",
-    sqlconf_confs.key);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value: '%s'",
-    sqlconf_confs.value);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.table: '%s'",
+    sqlconf_confs.table);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id_col: '%s'",
+    sqlconf_confs.id_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key_col: '%s'",
+    sqlconf_confs.key_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value_col: '%s'",
+    sqlconf_confs.value_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.where: '%s'",
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
-  if (sqlconf_parse_uri_map(&uri) < 0) {
+  if (sqlconf_parse_map_param(p, params) < 0) {
     int xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing map table portion of URI: %s", strerror(xerrno));
+      ": failed parsing map table portion of URI '%.100s': %s", uri,
+      strerror(xerrno));
 
     errno = xerrno;
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.tab: '%s'",
-    sqlconf_maps.tab);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id: '%s'",
-    sqlconf_maps.conf_id);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id: '%s'",
-    sqlconf_maps.ctx_id);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.table: '%s'",
+    sqlconf_maps.table);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id_col: '%s'",
+    sqlconf_maps.conf_id_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id_col: '%s'",
+    sqlconf_maps.ctx_id_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.where: '%s'",
     sqlconf_maps.where ? sqlconf_maps.where : "(none)");
 
-  if (*uri) {
-
-    /* The only option allowed here is:
-     *
-     *  base_id=id
-     *
-     */
-    if (strncmp(uri, "base_id=", 8) != 0) {
-      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-        ": failed parsing optional base ID portion of URI");
-      errno = EINVAL;
-      return -1;
-    }
-
-    uri += 8;
-    sqlconf_ctxs.base_id = pstrdup(conf_sql_pool, uri);
-    pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id: '%s'",
-      sqlconf_ctxs.base_id);
+  v = pr_table_get(params, "base_id", NULL);
+  if (v != NULL) {
+    sqlconf_ctxs.base_id = v;
   }
 
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id: '%s'",
+    sqlconf_ctxs.base_id);
   return 0;
 }
 
@@ -686,15 +423,15 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
   idstr[sizeof(idstr)-1] = '\0';
 
   if (sqlconf_ctxs.where == NULL) {
-    where = pstrcat(p, sqlconf_ctxs.parent_id, " = ", idstr, NULL);
+    where = pstrcat(p, sqlconf_ctxs.parent_id_col, " = ", idstr, NULL);
 
   } else {
-    where = pstrcat(p, sqlconf_ctxs.parent_id, " = ", idstr, " AND ",
+    where = pstrcat(p, sqlconf_ctxs.parent_id_col, " = ", idstr, " AND ",
       sqlconf_ctxs.where, NULL);
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
-    sqlconf_ctxs.id, where);
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.table,
+    sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res)
@@ -722,18 +459,18 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   idstr[sizeof(idstr)-1] = '\0';
 
   if (sqlconf_confs.where == NULL) {
-    query = pstrcat(p, sqlconf_confs.key, ", ", sqlconf_confs.value,
-      " FROM ", sqlconf_confs.tab, " INNER JOIN ", sqlconf_maps.tab,
-      " ON ", sqlconf_confs.tab, ".", sqlconf_confs.id, " = ",
-      sqlconf_maps.tab, ".", sqlconf_maps.conf_id, " WHERE ",
-      sqlconf_maps.tab, ".", sqlconf_maps.ctx_id, " = ", idstr, NULL);
+    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+      " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
+      " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
+      sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
+      sqlconf_maps.table, ".", sqlconf_maps.ctx_id_col, " = ", idstr, NULL);
 
   } else {
-    query = pstrcat(p, sqlconf_confs.key, ", ", sqlconf_confs.value,
-      " FROM ", sqlconf_confs.tab, " INNER JOIN ", sqlconf_maps.tab,
-      " ON ", sqlconf_confs.tab, ".", sqlconf_confs.id, " = ",
-      sqlconf_maps.tab, ".", sqlconf_maps.conf_id, " WHERE ",
-      sqlconf_maps.tab, ".", sqlconf_maps.ctx_id, " = ", idstr,
+    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+      " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
+      " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
+      sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
+      sqlconf_maps.table, ".", sqlconf_maps.ctx_id_col, " = ", idstr,
       " AND ", sqlconf_confs.where, NULL);
   }
 
@@ -769,15 +506,15 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   idstr[sizeof(idstr)-1] = '\0';
 
   if (sqlconf_ctxs.where == NULL) {
-    where = pstrcat(p, sqlconf_ctxs.id, " = ", idstr, NULL);
+    where = pstrcat(p, sqlconf_ctxs.id_col, " = ", idstr, NULL);
 
   } else {
-    where = pstrcat(p, sqlconf_ctxs.id, " = ", idstr, " AND ",
+    where = pstrcat(p, sqlconf_ctxs.id_col, " = ", idstr, " AND ",
       sqlconf_ctxs.where, NULL);
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
-    pstrcat(p, sqlconf_ctxs.key, ", ", sqlconf_ctxs.value, NULL),
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.table,
+    pstrcat(p, sqlconf_ctxs.key_col, ", ", sqlconf_ctxs.value_col, NULL),
     where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
@@ -844,8 +581,9 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.user, sqlconf_db.pass,
-     pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL));
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.username,
+     sqlconf_db.password, pstrcat(p, sqlconf_db.database, "@",
+     sqlconf_db.server, NULL));
   res = sqlconf_dispatch(cmd, "sql_define_conn");
   destroy_pool(cmd->pool);
 
@@ -874,16 +612,16 @@ static int sqlconf_read_db(pool *p) {
    * context whose ID is NULL.
    */
   if (sqlconf_ctxs.base_id == NULL) {
-    where = pstrcat(p, sqlconf_ctxs.parent_id, " IS NULL", NULL);
+    where = pstrcat(p, sqlconf_ctxs.parent_id_col, " IS NULL", NULL);
     which_id = "default";
 
   } else {
-    where = pstrcat(p, sqlconf_ctxs.id, " = ", sqlconf_ctxs.base_id, NULL);
+    where = pstrcat(p, sqlconf_ctxs.id_col, " = ", sqlconf_ctxs.base_id, NULL);
     which_id = "base";
   }
 
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.tab,
-    sqlconf_ctxs.id, where);
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.table,
+    sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
   if (!res) {
@@ -959,10 +697,13 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
 
   /* Is this a path that we can use? */
   if (strncmp("sql://", path, 6) == 0) {
-    char *uri = pstrdup(conf_sql_pool, path);
+    pool *p;
+
+    p = conf_sql_pool;
+    char *uri = pstrdup(p, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
-    if (sqlconf_parse_uri(uri) < 0) {
+    if (sqlconf_parse_uri(p, uri) < 0) {
       return -1;
     }
 

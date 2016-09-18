@@ -31,6 +31,7 @@ struct testsuite_info {
 
 static struct testsuite_info suites[] = {
   { "uri",		tests_get_uri_suite },
+  { "param",		tests_get_param_suite },
 
   { NULL, NULL }
 };
