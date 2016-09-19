@@ -12,8 +12,10 @@ my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
 
 my $test_dir = (File::Spec->splitpath(abs_path(__FILE__)))[1];
-#my $db_script = File::Spec->catfile($test_dir, '..', 'sqlite-conf.sql');
 my $db_script = File::Spec->catfile($test_dir, '..', '..', 'sqlite-conf.sql');
+if ($ENV{TRAVIS_CI}) {
+  $db_script = File::Spec->catfile($test_dir, '..', 'sqlite-conf.sql');
+}
 $db_script = realpath($db_script);
 print STDOUT "# db_script: $db_script\n";
 
