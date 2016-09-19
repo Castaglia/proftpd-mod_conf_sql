@@ -1,5 +1,5 @@
 /*
- * ProFTPD - mod_conf_sql URL Param API
+ * ProFTPD - mod_conf_sql Param API
  * Copyright (c) 2016 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
   char **id_col, char **key_col, char **value_col, char **where);
 #define CONF_SQL_CONF_DEFAULT_TABLE_NAME		"ftpconf"
 #define CONF_SQL_CONF_DEFAULT_ID_COL_NAME		"id"
-#define CONF_SQL_CONF_DEFAULT_KEY_COL_NAME		"type"
+#define CONF_SQL_CONF_DEFAULT_KEY_COL_NAME		"key"
 #define CONF_SQL_CONF_DEFAULT_VALUE_COL_NAME		"value"
 
 /* Expected format of the ctx parameter:
@@ -48,7 +48,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
 #define CONF_SQL_CTX_DEFAULT_TABLE_NAME			"ftpctx"
 #define CONF_SQL_CTX_DEFAULT_ID_COL_NAME		"id"
 #define CONF_SQL_CTX_DEFAULT_PARENT_ID_COL_NAME		"parent_id"
-#define CONF_SQL_CTX_DEFAULT_KEY_COL_NAME		"type"
+#define CONF_SQL_CTX_DEFAULT_KEY_COL_NAME		"key"
 #define CONF_SQL_CTX_DEFAULT_VALUE_COL_NAME		"value"
 
 /* Expected format of the map parameter:

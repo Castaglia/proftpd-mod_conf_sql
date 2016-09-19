@@ -44,7 +44,7 @@ static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
     if (ptr == NULL) {
       /* If there is no ']', then it's a badly-formatted URI. */
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-        ": badly formatted IPv6 address in host info '%.100s'", orig_uri);
+        ": badly formatted IPv6 address in host info '%.200s'", orig_uri);
       errno = EINVAL;
       return NULL;
     }
@@ -117,7 +117,7 @@ static int uri_parse_port(pool *p, const char *orig_uri, const char *uri,
   for (i = 0; i < portspeclen; i++) {
     if (PR_ISDIGIT((int) portspec[i]) == 0) {
       pr_log_debug(DEBUG2, MOD_CONF_SQL_VERSION
-        ": invalid character (%c) at index %d in port specification '%.100s'",
+        ": invalid character (%c) at index %d in port specification '%.200s'",
         portspec[i], i, portspec);
       errno = EINVAL;
       return -1;
@@ -132,7 +132,7 @@ static int uri_parse_port(pool *p, const char *orig_uri, const char *uri,
   if (*port == 0 ||
       *port >= 65536) {
     pr_log_debug(DEBUG2, MOD_CONF_SQL_VERSION
-      ": port specification '%.100s' yields invalid port number %d",
+      ": port specification '%.200s' yields invalid port number %d",
       portspec, *port);
     errno = EINVAL;
     return -1;
@@ -240,7 +240,7 @@ static int uri_parse_kv(pool *p, const char *uri, char *kv, size_t kvlen,
   ptr = memchr(kv, '=', kvlen);
   if (ptr == NULL) {
     pr_log_debug(DEBUG1, MOD_CONF_SQL_VERSION
-      ": badly formatted query parameter '%.*s' in URI '%.100s'", (int) kvlen,
+      ": badly formatted query parameter '%.*s' in URI '%.200s'", (int) kvlen,
       kv, uri);
     errno = EINVAL;
     return -1;
@@ -262,19 +262,19 @@ static int uri_store_kv(pool *p, const char *uri, pr_table_t *params,
   v = pstrndup(p, v, vlen);
 
   if (pr_table_count(params) == 0 ||
-      pr_table_kexists(params, k, klen) == 0) {
+      pr_table_exists(params, k) == 0) {
     k = pstrndup(p, k, klen);
-    res = pr_table_kadd(params, k, klen, v, vlen);
+    res = pr_table_add(params, k, v, vlen);
 
   } else {
-    res = pr_table_kset(params, k, klen, v, vlen);
+    res = pr_table_set(params, k, v, vlen);
   }
 
   if (res < 0) {
     int xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error stashing '%.*s=%.*s' from URI '%.100s': %s", (int) klen, k,
+      ": error stashing '%.*s=%.*s' from URI '%.200s': %s", (int) klen, k,
       (int) vlen, v, uri, strerror(xerrno));
 
     errno = xerrno;
@@ -376,14 +376,14 @@ int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
   len = strlen(orig_uri);
   if (len < 7) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": unknown/unsupported scheme in URI '%.100s'", orig_uri);
+      ": unknown/unsupported scheme in URI '%.200s'", orig_uri);
     errno = EINVAL;
     return -1;
   }
 
   if (strncmp(orig_uri, "sql://", 6) != 0) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": unknown/unsupported scheme in URI '%.100s'", orig_uri);
+      ": unknown/unsupported scheme in URI '%.200s'", orig_uri);
     errno = EINVAL;
     return -1;
   }

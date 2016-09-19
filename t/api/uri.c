@@ -531,6 +531,25 @@ START_TEST (uri_parse_real_uris_test) {
   res = pr_table_count(params);
   fail_unless(res == 5, "Expected 5 parameters, got %d", res);
 
+  mark_point();
+  host = path = username = password = NULL;
+  port = 0;
+  pr_table_empty(params);
+  uri = "sql:///Users/tj/git/proftpd-mod_conf_sql/proftpd.db?ctx=ftpctx:id,parent_id,name,type,value&conf=ftpconf:id,type,value";
+  res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
+    params);
+  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  expected = "/Users/tj/git/proftpd-mod_conf_sql/proftpd.db";
+  fail_unless(host != NULL, "Expected host, got null");
+  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+    expected, host);
+  fail_unless(path == NULL, "Expected null, got path '%s'", path);
+  fail_unless(username == NULL, "Expected null, got username");
+  fail_unless(password == NULL, "Expected null, got password");
+  fail_unless(port == 0, "Expected 0, got %u", port);
+  res = pr_table_count(params);
+  fail_unless(res == 2, "Expected 2 parameters, got %d", res);
+
   pr_table_empty(params);
   pr_table_free(params);
 }
@@ -540,7 +559,7 @@ START_TEST (uri_urldecode_test) {
   int res;
   const char *src;
   char *dst = NULL, *expected;
-  size_t srcsz, dstsz, expectedsz;
+  size_t dstsz, expectedsz;
 
   mark_point();
   res = sqlconf_uri_urldecode(NULL, NULL, 0, NULL, NULL);

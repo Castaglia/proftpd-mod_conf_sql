@@ -71,13 +71,13 @@ uses:
   CREATE TABLE ftpctx IF NOT EXISTS (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
     parent_id INTEGER UNSIGNED,
-    name VARCHAR(255),
+    key VARCHAR(255),
     value VARCHAR(255)
   );
 
   CREATE TABLE ftpconf IF NOT EXISTS (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
+    key VARCHAR(255) NOT NULL,
     value BLOB
   );
 
@@ -91,14 +91,14 @@ Example PostgresQL schema:
   CREATE TABLE ftpctx IF NOT EXISTS (
     id SERIAL,
     parent_id INTEGER,
-    name VARCHAR(255),
+    key VARCHAR(255),
     value VARCHAR(255),
     PRIMARY KEY (id)
   );
 
   CREATE TABLE ftpconf IF NOT EXISTS (
     id SERIAL,
-    name VARCHAR(255) NOT NULL,
+    key VARCHAR(255) NOT NULL,
     value TEXT,
     PRIMARY KEY (id)
   );
@@ -139,7 +139,7 @@ to the configuration file, using <code>proftpd</code>'s
 &quot;path&quot; to use for <code>mod_conf_sql</code> uses an URI-like
 syntax:
 <pre>
-  sql://<i>dbuser</i>:<i>dbpass</i>@<i>dbserver</i>?db=<i>dbname</i>
+  sql://<i>dbuser</i>:<i>dbpass</i>@<i>dbserver</i>?database=<i>dbname</i>
     &amp;ctx=<i>table</i>[:<i>id,parent_id,key,value</i>][:where=<i>clause</i>]
     &amp;conf=<i>table</i>[:<i>id,key,value</i>][:where=<i>clause</i>]
     &amp;map=<i>table</i>[:<i>conf_id,ctx_id</i>][:where=<i>clause</i>]
@@ -168,18 +168,23 @@ The following example shows a &quot;path&quot; where the table names are
 specified, but the column names in those tables are left to the default
 values:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost?db=proftpd&amp;ctx=ftpctx&amp;conf=ftpconf&amp;map=ftpmap
+  $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx&amp;conf=ftpconf&amp;map=ftpmap'
 </pre>
+Note that the entire URL needs to be enclosed in single quotes, otherwise
+the shell will handle the ampersand (&amp;) characters in the URL <i>as</i>
+shell control characters.
+
+<p>
 Explicitly specifying the column names in the above URI would make the
 &quot;path&quot; look like:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost?db=proftpd&amp;ctx=ftpctx:id,parent_id,type,value&amp;conf=ftpconf:id,type,value&amp;map=ftpmap:conf_id,ctx_id
+  $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx:id,parent_id,type,value&amp;conf=ftpconf:id,type,value&amp;map=ftpmap:conf_id,ctx_id'
 </pre>
 This example shows a URI that causes <code>mod_conf_sql</code> to treat the
 context with an ID of of <em>baseid</em> as the toplevel configuration context,
 rather than the default:
 <pre>
-  $ proftpd -c sql://foo:bar@localhost?db=proftpd&amp;ctx=ftpctx&amp;conf=ftpconf&amp;map=ftpmap&amp;base_id=<i>baseid</i>
+  $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx&amp;conf=ftpconf&amp;map=ftpmap&amp;base_id=<i>baseid</i>'
 </pre>
 
 <p>
@@ -190,7 +195,7 @@ that the configuration parser knows the proper configuration data to retrieve
 from the SQL tables.
 <pre>
   &lt;VirtualHost 1.2.3.4&gt;
-    Include sql://foo:bar@localhost?db=proftpd&amp;ctx=vhostctx&amp;conf=vhostconf&amp;map=vhostmap&amp;base_id=7
+    Include sql://foo:bar@localhost?database=proftpd&amp;ctx=vhostctx&amp;conf=vhostconf&amp;map=vhostmap&amp;base_id=7
   &lt;/VirtualHost&gt;
 </pre>
 This tells <code>mod_conf_sql</code> to look for a row in the

@@ -76,13 +76,6 @@ struct {
 
 } sqlconf_maps;
 
-#define SQLCONF_DEFAULT_CONF_ID_NAME    "conf_id"
-#define SQLCONF_DEFAULT_CTXT_ID_NAME    "ctx_id"
-#define SQLCONF_DEFAULT_ID_NAME         "id"
-#define SQLCONF_DEFAULT_KEY_NAME       	"key"
-#define SQLCONF_DEFAULT_PARENT_ID_NAME  "parent_id"
-#define SQLCONF_DEFAULT_VALUE_NAME      "value"
-
 module conf_sql_module;
 pool *conf_sql_pool = NULL;
 
@@ -190,7 +183,7 @@ static int sqlconf_parse_map_param(pool *p, pr_table_t *params) {
   sqlconf_maps.table = CONF_SQL_MAP_DEFAULT_TABLE_NAME;
   sqlconf_maps.conf_id_col = CONF_SQL_MAP_DEFAULT_CONF_ID_COL_NAME;
   sqlconf_maps.ctx_id_col = CONF_SQL_MAP_DEFAULT_CTX_ID_COL_NAME;
-  sqlconf_confs.where = NULL;
+  sqlconf_maps.where = NULL;
 
   table = conf_id_col = ctx_id_col = where = NULL;
 
@@ -291,7 +284,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
 
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.table = %s",
     sqlconf_ctxs.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col = '%s",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col = %s",
     sqlconf_ctxs.id_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col = %s",
     sqlconf_ctxs.parent_id_col);

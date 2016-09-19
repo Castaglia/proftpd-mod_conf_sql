@@ -172,6 +172,35 @@ START_TEST (param_parse_conf_test) {
   fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
+  /* "conf" parameter with table name, and column names, and no WHERE clause. */
+  table = id_col = key_col = value_col = where = NULL;
+  pr_table_empty(params);
+
+  param = "my_table:my_id_col,my_key_col,my_val_col";
+  pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
+
+  mark_point();
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+    &value_col, &where);
+  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  expected = "my_table";
+  fail_unless(table != NULL, "Expected table, got null");
+  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+    expected, table);
+  expected = "my_id_col";
+  fail_unless(id_col != NULL, "Expected id_col, got null");
+  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, id_col);
+  expected = "my_key_col";
+  fail_unless(key_col != NULL, "Expected key_col, got null");
+  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, key_col);
+  expected = "my_val_col";
+  fail_unless(value_col != NULL, "Expected value_col, got null");
+  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, value_col);
+  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+
   /* "conf" parameter with table name, column names, and WHERE clause. */
   table = id_col = key_col = value_col = where = NULL;
   pr_table_empty(params);
@@ -425,6 +454,39 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
+  /* "ctx" parameter with table name, column names, and no WHERE clause. */
+  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  pr_table_empty(params);
+
+  param = "my_table:my_id_col,my_parentid_col,my_key_col,my_val_col";
+  pr_table_add(params, pstrdup(p, "ctx"), pstrdup(p, param), 0);
+
+  mark_point();
+  res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
+    &key_col, &value_col, &where);
+  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  expected = "my_table";
+  fail_unless(table != NULL, "Expected table, got null");
+  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+    expected, table);
+  expected = "my_id_col";
+  fail_unless(id_col != NULL, "Expected id_col, got null");
+  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, id_col);
+  expected = "my_parentid_col";
+  fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
+  fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, parent_id_col);
+  expected = "my_key_col";
+  fail_unless(key_col != NULL, "Expected key_col, got null");
+  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, key_col);
+  expected = "my_val_col";
+  fail_unless(value_col != NULL, "Expected value_col, got null");
+  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, value_col);
+  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+
   /* "ctx" parameter with table name, column names, and WHERE clause. */
   table = id_col = parent_id_col = key_col = value_col = where = NULL;
   pr_table_empty(params);
@@ -661,6 +723,31 @@ START_TEST (param_parse_map_test) {
   fail_unless(where != NULL, "Expected where, got null");
   fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
+
+  /* "map" parameter table name, column names, and no WHERE clause. */
+  table = conf_id_col = ctx_id_col = where = NULL;
+  pr_table_empty(params);
+
+  param = "table:my_conf_id,my_ctx_id";
+  pr_table_add(params, pstrdup(p, "map"), pstrdup(p, param), 0);
+
+  mark_point();
+  res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
+    &where);
+  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  expected = "table";
+  fail_unless(table != NULL, "Expected table, got null");
+  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+    expected, table);
+  expected = "my_conf_id";
+  fail_unless(conf_id_col != NULL, "Expected conf_id_col, got null");
+  fail_unless(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, conf_id_col);
+  expected = "my_ctx_id";
+  fail_unless(ctx_id_col != NULL, "Expected ctx_id_col, got null");
+  fail_unless(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, ctx_id_col);
+  fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "map" parameter table name, column names, and WHERE clause. */
   table = conf_id_col = ctx_id_col = where = NULL;
