@@ -24,6 +24,7 @@
 
 #include "mod_conf_sql.h"
 #include "param.h"
+#include "uri.h"
 
 /* Expected format of the conf parameter:
  *
@@ -136,6 +137,8 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
   }
 
   if (ptr != NULL) {
+    size_t wheresz = 0;
+
     /* Possible WHERE clause included. */
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
@@ -145,7 +148,8 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
       return -1;
     }
 
-    *where = pstrdup(p, ptr+1);
+    sz = strlen(ptr+1);
+    sqlconf_uri_urldecode(p, ptr+1, sz, where, &wheresz);
   }
 
   return 0;
@@ -278,6 +282,8 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
   }
 
   if (ptr != NULL) {
+    size_t wheresz = 0;
+
     /* Possible WHERE clause included. */
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
@@ -287,7 +293,8 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
       return -1;
     }
 
-    *where = pstrdup(p, ptr+1);
+    sz = strlen(ptr+1);
+    sqlconf_uri_urldecode(p, ptr+1, sz, where, &wheresz);
   }
 
   return 0;
@@ -389,6 +396,8 @@ int sqlconf_param_parse_map(pool *p, pr_table_t *params, char **table,
   }
 
   if (ptr != NULL) {
+    size_t wheresz = 0;
+
     /* Possible WHERE clause included. */
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
@@ -398,7 +407,8 @@ int sqlconf_param_parse_map(pool *p, pr_table_t *params, char **table,
       return -1;
     }
 
-    *where = pstrdup(p, ptr+1);
+    sz = strlen(ptr+1);
+    sqlconf_uri_urldecode(p, ptr+1, sz, where, &wheresz);
   }
 
   return 0;

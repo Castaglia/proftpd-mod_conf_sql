@@ -459,3 +459,76 @@ int sqlconf_uri_parse(pool *p, const char *orig_uri, char **host,
   destroy_pool(sub_pool);
   return 0;
 }
+
+int sqlconf_uri_urldecode(pool *p, const char *src, size_t srcsz,
+    char **dst, size_t *dstsz) {
+  char a, b, *ptr;
+
+  if (p == NULL ||
+      src == NULL ||
+      dst == NULL ||
+      dstsz == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (srcsz == 0) {
+    *dstsz = 0;
+    *dst = pstrdup(p, "");
+    return 0;
+  }
+
+  /* ASSUME that the decoded version will be smaller, thus we make a copy
+   * of the source string, and decode in place.
+   *
+   * Implementation borrowed from:
+   *  http://stackoverflow.com/questions/2673207/c-c-url-decode-library
+   */
+
+  *dst = ptr = pcalloc(p, srcsz+1);
+
+  while (*src) {
+    pr_signals_handle();
+
+    if ((*src == '%') &&
+        ((a = src[1]) && (b = src[2])) &&
+        (PR_ISXDIGIT(a) && PR_ISXDIGIT(b))) {
+      if (a >= 'a') {
+        a -= 'a'-'A';
+      }
+
+      if (a >= 'A') {
+        a -= ('A' - 10);
+
+      } else {
+        a -= '0';
+      }
+
+      if (b >= 'a') {
+        b -= 'a'-'A';
+      }
+
+      if (b >= 'A') {
+        b -= ('A' - 10);
+
+      } else {
+        b -= '0';
+      }
+
+      *ptr++ = (16 * a) + b;
+      src += 3;
+
+    } else if (*src == '+') {
+      *ptr++ = ' ';
+      src++;
+
+    } else {
+      *ptr++ = *src++;
+    }
+  }
+
+  *ptr++ = '\0';
+  *dstsz = strlen(*dst);
+
+  return 0;
+}

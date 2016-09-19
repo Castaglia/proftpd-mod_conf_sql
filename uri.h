@@ -38,4 +38,8 @@
 int sqlconf_uri_parse(pool *p, const char *uri, char **host, unsigned int *port,
   char **path, char **username, char **password, pr_table_t *params);
 
+/* Returns a URL-decoded version of the given string. */
+int sqlconf_uri_urldecode(pool *p, const char *src, size_t srcsz, char **dst,
+  size_t *dstsz);
+
 #endif /* MOD_CONF_SQL_URI_H */

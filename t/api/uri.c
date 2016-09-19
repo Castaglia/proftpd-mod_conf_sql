@@ -536,6 +536,69 @@ START_TEST (uri_parse_real_uris_test) {
 }
 END_TEST
 
+START_TEST (uri_urldecode_test) {
+  int res;
+  const char *src;
+  char *dst = NULL, *expected;
+  size_t srcsz, dstsz, expectedsz;
+
+  mark_point();
+  res = sqlconf_uri_urldecode(NULL, NULL, 0, NULL, NULL);
+  fail_unless(res < 0, "Failed to handle null pool");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  res = sqlconf_uri_urldecode(p, NULL, 0, NULL, NULL);
+  fail_unless(res < 0, "Failed to handle null src");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  src = "foo+bar%20baz";
+
+  mark_point();
+  res = sqlconf_uri_urldecode(p, src, 0, NULL, NULL);
+  fail_unless(res < 0, "Failed to handle null dst");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  res = sqlconf_uri_urldecode(p, src, 0, &dst, NULL);
+  fail_unless(res < 0, "Failed to handle null dstsz");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  dst = NULL;
+  dstsz = 6789;
+
+  mark_point();
+  res = sqlconf_uri_urldecode(p, src, 0, &dst, &dstsz);
+  fail_unless(res == 0, "Failed to handle zero-length src: %s",
+    strerror(errno));
+  expected = "";
+  fail_unless(dst != NULL, "Expected dst, got null");
+  fail_unless(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
+    expected, dst);
+  fail_unless(dstsz == 0, "Expected 0, got %lu", (unsigned long) dstsz);
+
+  dst = NULL;
+  dstsz = 0;
+
+  mark_point();
+  res = sqlconf_uri_urldecode(p, src, strlen(src), &dst, &dstsz);
+  fail_unless(res == 0, "Failed to handle src '%s': %s", src,
+    strerror(errno));
+  expected = "foo bar baz";
+  fail_unless(dst != NULL, "Expected dst, got null");
+  fail_unless(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
+    expected, dst);
+
+  expectedsz = strlen(expected);
+  fail_unless(dstsz == expectedsz, "Expected %lu, got %lu",
+    (unsigned long) expectedsz, (unsigned long) dstsz);
+}
+END_TEST
+
 Suite *tests_get_uri_suite(void) {
   Suite *suite;
   TCase *testcase;
@@ -553,6 +616,8 @@ Suite *tests_get_uri_suite(void) {
   tcase_add_test(testcase, uri_parse_path_test);
   tcase_add_test(testcase, uri_parse_params_test);
   tcase_add_test(testcase, uri_parse_real_uris_test);
+
+  tcase_add_test(testcase, uri_urldecode_test);
 
   suite_add_tcase(suite, testcase);
   return suite;
