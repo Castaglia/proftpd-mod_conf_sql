@@ -29,9 +29,9 @@ if (scalar(@ARGV) > 0) {
   $test_files = [@ARGV];
 
 } else {
-  $test_files = [qw(
-    t/integration/sqlite.t
-  )];
+  $test_files = [
+    "$test_dir/sqlite.t"
+  ];
 }
 
 my $tap_opts = {
