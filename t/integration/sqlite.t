@@ -39,7 +39,7 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple SQLite URL");
 
-my $complex_url = "sql://$db_file?database=proftpd&ctx=ftpctx:id,parent_id,key,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,key,value";
+my $complex_url = "sql://$db_file?database=proftpd&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 $cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
@@ -51,7 +51,7 @@ $cmd = "$proftpd -td10 -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
-ok(defined($ex), "failed to handle invalid SQLite URL");
+ok(defined($ex), "handled invalid SQLite URL");
 
 $cmd = "$conf2sql --dbdriver=sqlite --dbname=$db_file $config_file";
 $ex = undef;
