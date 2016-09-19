@@ -49,6 +49,6 @@ dist: clean
 	$(RM) Makefile $(MODULE_NAME).h *.gcda *.gcno config.status config.cache config.log *.gcda *.gcno
 	-$(RM) -r .libs/ .git/ CVS/ RCS/
 
-# Run the API unit tests
+# Run the tests
 check:
 	test -z "$(ENABLE_TESTS)" || (cd t/ && $(MAKE) api-tests integration-tests)
