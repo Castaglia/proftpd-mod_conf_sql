@@ -101,7 +101,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'conf' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -115,7 +115,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'conf' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -143,7 +143,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'conf' parameter '%.*s': bad WHERE clause",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -232,7 +232,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'ctx' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -246,7 +246,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'ctx' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -260,7 +260,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'ctx' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -288,7 +288,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'ctx' parameter '%.*s': bad WHERE clause",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -374,7 +374,7 @@ int sqlconf_param_parse_map(pool *p, pr_table_t *params, char **table,
     if (ptr == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'map' parameter '%.*s': missing column names",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }
@@ -402,7 +402,7 @@ int sqlconf_param_parse_map(pool *p, pr_table_t *params, char **table,
     if (strncasecmp(ptr+1, "where=", 6) != 0) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": badly formatted 'map' parameter '%.*s': bad WHERE clause",
-        (int) valsz, val);
+        (int) valsz, (char *) val);
       errno = EINVAL;
       return -1;
     }

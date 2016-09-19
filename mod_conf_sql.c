@@ -276,7 +276,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_db.database ? sqlconf_db.database : "(none)");
 
   if (sqlconf_parse_ctx_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing context table portion of URI '%.100s': %s", uri,
@@ -300,7 +300,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
   if (sqlconf_parse_conf_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing directive table portion of URI '%.100s': %s", uri,
@@ -322,7 +322,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
   if (sqlconf_parse_map_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing map table portion of URI '%.100s': %s", uri,
@@ -357,7 +357,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
 /* Note: mod_sql.c doesn't expose this function, so we'll need our own copy
  * of it.
  */
-static cmd_rec *sqlconf_cmd_alloc(pool *p, int argc, ...) {
+static cmd_rec *sqlconf_cmd_alloc(pool *p, unsigned int argc, ...) {
   pool *sub_pool = NULL;
   cmd_rec *cmd = NULL;
   va_list args;
@@ -374,8 +374,9 @@ static cmd_rec *sqlconf_cmd_alloc(pool *p, int argc, ...) {
 
   va_start(args, argc);
 
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < argc; i++) {
     cmd->argv[i] = (void *) va_arg(args, char *);
+  }
   va_end(args);
 
   return cmd;
@@ -780,9 +781,10 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
   /* Is this a path that we can use? */
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     pool *p;
+    char *uri;
 
     p = conf_sql_pool;
-    char *uri = pstrdup(p, path);
+    uri = pstrdup(p, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
     if (sqlconf_parse_uri(p, uri) < 0) {
