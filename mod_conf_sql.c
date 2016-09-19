@@ -33,6 +33,10 @@
 #include "uri.h"
 #include "param.h"
 
+#define CONF_SQL_URI_SCHEME		"sql"
+#define CONF_SQL_URI_PREFIX		CONF_SQL_URI_SCHEME "://"
+#define CONF_SQL_URI_PREFIX_LEN		6
+
 /* Fake fd number for FSIO needs. */
 #define CONF_SQL_FILENO		2746
 
@@ -701,7 +705,7 @@ static int sqlconf_fsio_fstat(pr_fh_t *fh, int fd, struct stat *st) {
 
 static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
   /* Is this a path that we can use? */
-  if (strncmp("sql://", path, 6) == 0) {
+  if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     return 0;
   }
 
@@ -710,7 +714,7 @@ static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
 
 static int sqlconf_fsio_stat(pr_fs_t *fs, const char *path, struct stat *st) {
   /* Is this a path that we can use? */
-  if (strncmp("sql://", path, 6) == 0) {
+  if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     return 0;
   }
 
@@ -720,7 +724,7 @@ static int sqlconf_fsio_stat(pr_fs_t *fs, const char *path, struct stat *st) {
 static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
 
   /* Is this a path that we can use? */
-  if (strncmp("sql://", path, 6) == 0) {
+  if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     pool *p;
 
     p = conf_sql_pool;
@@ -750,8 +754,9 @@ static int sqlconf_fsio_close(pr_fh_t *fh, int fd) {
 static int sqlconf_fsio_read(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
   /* Make sure this filehandle is for this module before trying to use it. */
-  if (fh->fh_path &&
-      strncmp("sql://", fh->fh_path, 6) == 0) {
+  if (fd == CONF_SQL_FILENO &&
+      fh->fh_path != NULL &&
+      strncmp(CONF_SQL_URI_PREFIX, fh->fh_path, CONF_SQL_URI_PREFIX_LEN) == 0) {
 
     if (sqlconf_conf == NULL &&
         sqlconf_read_db(fh->fh_pool) < 0) {

@@ -186,6 +186,13 @@ rather than the default:
 <pre>
   $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx&amp;conf=ftpconf&amp;map=ftpmap&amp;base_id=<i>baseid</i>'
 </pre>
+Using a database like SQLite, which does not have a remote server/port, or
+usernames and passwords, requires a slightly different syntax, <i>e.g.</i>:
+<pre>
+  $ proftpd -c 'sql:///path/to/proftpd.db?database=proftpd&amp;ctxt=ftpctxt&amp;conf=ftpconf&amp;map=ftpmap&amp;base_id=<i>baseid</i>'
+</pre>
+Note how there are <i>three</i> slashes after the "sql:" prefix.
+
 
 <p>
 This URI-like path syntax can also be used as the parameter to the
