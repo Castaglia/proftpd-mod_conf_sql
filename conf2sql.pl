@@ -109,6 +109,7 @@ while (chomp(my $line = <$conf>)) {
   # If the line starts with a '<' (and not a '</'), it's the start of a new
   # context.
   if ($line =~ /^<[^\/]/) {
+    chomp($line);
     $line =~ /^<(\S+)(\s+)?(.*)?>.*$/;
 
     my ($type, $value) = ($1, $3);
@@ -129,6 +130,7 @@ while (chomp(my $line = <$conf>)) {
   # (unless the current context is the default one, in which case it's
   # a syntax error in the config file.
   } elsif ($line =~ /^<\//) {
+    chomp($line);
     $line =~ /^<\/(\S+).*?>$/;
 
     # Note: if the closing context name value doesn't match the current context
@@ -142,6 +144,7 @@ while (chomp(my $line = <$conf>)) {
 
   # Otherwise, it's a directive for the current context
   } else {
+    chomp($line);
 
     if ($line =~ /^(\S+)\s+(.*)$/) {
       push(@{ $ctx->{directives} }, { name => $1, value => $2 });

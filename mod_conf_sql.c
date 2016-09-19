@@ -559,6 +559,42 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   return 0;
 }
 
+static int sqlconf_close_db(pool *p) {
+  cmd_rec *cmd = NULL;
+  modret_t *res = NULL;
+
+  /* Close the connection. */
+  cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
+  res = sqlconf_dispatch(cmd, "sql_close_conn");
+  destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
+
+    errmsg = MODRET_ERRMSG(res);
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error closing database connection: %s",
+      errmsg ? errmsg : strerror(errno));
+    errno = EINVAL;
+    return -1;
+  }
+
+  /* Cleanup the SQL subsystem. */
+  cmd = sqlconf_cmd_alloc(p, 0);
+  res = sqlconf_dispatch(cmd, "sql_cleanup");
+  destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
+
+    errmsg = MODRET_ERRMSG(res);
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error cleaning up SQL system: %s", errmsg ? errmsg : strerror(errno));
+    errno = EINVAL;
+    return -1;
+  }
+
+  return 0;
+}
+
 /* Construct the configuration file from the database contents. */
 static int sqlconf_read_db(pool *p) {
   int id = 0;
@@ -635,6 +671,8 @@ static int sqlconf_read_db(pool *p) {
   if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
+
+    (void) sqlconf_close_db(p);
     errno = ENOENT;
     return -1;
   }
@@ -653,6 +691,8 @@ static int sqlconf_read_db(pool *p) {
         sd->fnum != 1) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": retrieving %s context failed: bad/non-unique results", which_id);
+
+      (void) sqlconf_close_db(p);
       errno = ENOENT;
       return -1;
     }
@@ -661,6 +701,8 @@ static int sqlconf_read_db(pool *p) {
         sd->data[0] == NULL) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": retrieving %s context failed: no matching results", which_id);
+
+      (void) sqlconf_close_db(p);
       errno = ENOENT;
       return -1;
     }
@@ -676,32 +718,7 @@ static int sqlconf_read_db(pool *p) {
     sqlconf_read_ctx(p, id, TRUE);
   }
 
-  /* Close the connection. */
-  cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
-  res = sqlconf_dispatch(cmd, "sql_close_conn");
-  destroy_pool(cmd->pool);
-  if (MODRET_ISERROR(res)) {
-    const char *errmsg;
-
-    errmsg = MODRET_ERRMSG(res);
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error closing database connection: %s",
-      errmsg ? errmsg : strerror(errno));
-    errno = EINVAL;
-    return -1;
-  }
-
-  /* Cleanup the SQL subsystem. */
-  cmd = sqlconf_cmd_alloc(p, 0);
-  res = sqlconf_dispatch(cmd, "sql_cleanup");
-  destroy_pool(cmd->pool);
-  if (MODRET_ISERROR(res)) {
-    const char *errmsg;
-
-    errmsg = MODRET_ERRMSG(res);
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error cleaning up SQL system: %s", errmsg ? errmsg : strerror(errno));
-    errno = EINVAL;
+  if (sqlconf_close_db(p) < 0) {
     return -1;
   }
 
