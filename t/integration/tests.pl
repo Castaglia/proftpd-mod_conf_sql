@@ -25,6 +25,9 @@ my $test_dir = (File::Spec->splitpath(abs_path(__FILE__)))[1];
 # e.g. to run the tests that come with third-party modules.
 unless (defined($ENV{PROFTPD_TEST_BIN})) {
   my $bin = File::Spec->catfile($test_dir, '..', '..', 'proftpd');
+  if ($ENV{TRAVIS_CI}) {
+    $bin = "$ENV{TRAVIS_BUILD_DIR}/proftpd/proftpd";
+  }
   $ENV{PROFTPD_TEST_BIN} = realpath($bin);
 }
 
