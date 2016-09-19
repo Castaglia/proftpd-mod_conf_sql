@@ -50,7 +50,11 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok(defined($ex), "handled invalid SQLite URL");
 
-$cmd = "$conf2sql --dbdriver=sqlite --dbname=$db_file $config_file";
+my $verbose = '';
+if ($ENV{TEST_VERBOSE}) {
+  $verbose = '--verbose';
+}
+$cmd = "$conf2sql $verbose --dbdriver=sqlite --dbname=$db_file $config_file";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;

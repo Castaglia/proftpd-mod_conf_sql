@@ -33,8 +33,6 @@ unless (defined($ENV{PROFTPD_TEST_BIN})) {
 
 $| = 1;
 
-print STDOUT "# PROFTPD_TEST_BIN = $ENV{PROFTPD_TEST_BIN}\n";
-
 my $test_files = [
   ["$test_dir/sqlite.t", 'sqlite'],
 ];

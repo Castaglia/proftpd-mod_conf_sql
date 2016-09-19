@@ -180,11 +180,17 @@ unless ($opts->{'add-conf'}) {
 }
 
 $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (NULL, '" . ($opts->{'ctx-prefix'} . '1') . "', 'default', NULL)";
+if ($opts->{verbose}) {
+  print STDOUT "# Executing: $sql\n";
+}
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 dbi_free_sql($sth);
 
 $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = 'default' AND value IS NULL";
+if ($opts->{verbose}) {
+  print STDOUT "# Executing: $sql\n";
+}
 $sth = dbi_prep_sql($sql);
 dbi_exec_sql($sql, $sth);
 my $parent_id = ($sth->fetchrow_array())[0];
@@ -242,18 +248,27 @@ sub process_ctx {
     my $value = $dbh->quote($conf->{value});
 
     $sql = "INSERT INTO $opts->{'conf-tab'} (name, value) VALUES ($name, $value)";
+    if ($opts->{verbose}) {
+      print STDOUT "# Executing: $sql\n";
+    }
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
     # XXX Consider using placeholders, for space-bearing values
     $sql = "SELECT id FROM $opts->{'conf-tab'} WHERE name = $name AND value = $value";
+    if ($opts->{verbose}) {
+      print STDOUT "# Executing: $sql\n";
+    }
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $conf_id = ($sth->fetchrow_array())[0];
     dbi_free_sql($sth);
 
     $sql = "INSERT INTO $opts->{'map-tab'} (ctx_id, conf_id) VALUES ($ctx_id, $conf_id)";
+    if ($opts->{verbose}) {
+      print STDOUT "# Executing: $sql\n";
+    }
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
@@ -266,11 +281,17 @@ sub process_ctx {
     my $value = $dbh->quote($sub_ctx->{value});
 
     $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES ($ctx_id, $name, $type, $value)";
+    if ($opts->{verbose}) {
+      print STDOUT "# Executing: $sql\n";
+    }
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
     $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = $type AND value = $value AND parent_id = $ctx_id";
+    if ($opts->{verbose}) {
+      print STDOUT "# Executing: $sql\n";
+    }
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $sub_ctx_id = ($sth->fetchrow_array())[0];
