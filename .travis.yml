@@ -12,6 +12,8 @@ install:
   # for mod_sql_sqlite
   - sudo apt-get install -y libsqlite3-dev sqlite3
   # for static code analysis
+  # for Perl scripts
+  - sudo apt-get install -y libdbi-perl libdbd-mysql-perl libdbd-pg-perl libdbd-sqlite3-perl
   - sudo apt-get install -y cppcheck rats
   # for test code coverage
   - sudo apt-get install -y lcov
@@ -29,6 +31,7 @@ script:
   - git clone https://github.com/proftpd/proftpd.git
   - mkdir -p proftpd/contrib/mod_conf_sql/
   - cp *.[ch] proftpd/contrib/mod_conf_sql/
+  - cp *.pl proftpd/contrib/mod_conf_sql/
   - cp mod_conf_sql.* proftpd/contrib/mod_conf_sql/
   - cp Makefile.in proftpd/contrib/mod_conf_sql/
   - cp config* proftpd/contrib/mod_conf_sql/

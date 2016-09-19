@@ -389,16 +389,15 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
   if (cmdtab == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": unable to find SQL hook symbol '%s'", name);
+    errno = ENOENT;
     return PR_ERROR(cmd);
   }
 
   res = pr_module_call(cmdtab->m, cmdtab->handler, cmd);
-
-  /* Do some sanity checks on the returned response. */
   if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": '%s' error: %s", name,
       res->mr_message);
-    return NULL;
+    return res;
   }
 
   return res;
@@ -431,8 +430,9 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
     sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res)
+  if (MODRET_ISERROR(res)) {
     return -1;
+  }
 
   sd = res->data;
 
@@ -474,8 +474,9 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", query);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res)
+  if (MODRET_ISERROR(res)) {
     return -1;
+  }
 
   sd = res->data;
 
@@ -515,7 +516,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
     where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG4, MOD_CONF_SQL_VERSION
       ": notice: context ID (%d) has no associated key/value", ctx_id);
     errno = ENOENT;
@@ -572,10 +573,15 @@ static int sqlconf_read_db(pool *p) {
   res = sqlconf_dispatch(cmd, "sql_load_backend");
   destroy_pool(cmd->pool);
 
+/* XXX What if mod_sql is not built/loaded? */
+/* XXX What if desired backend is not built/loaded? */
+
   /* Prepare the SQL subsystem. */
   cmd = sqlconf_cmd_alloc(p, 1, make_sub_pool(p));
   res = sqlconf_dispatch(cmd, "sql_prepare");
   destroy_pool(cmd->pool);
+
+/* XXX What if this preparation fails? */
 
   /* Define the connection we'll be making. */
   username = sqlconf_db.username;
@@ -590,8 +596,7 @@ static int sqlconf_read_db(pool *p) {
   cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", username, password, dsn);
   res = sqlconf_dispatch(cmd, "sql_define_conn");
   destroy_pool(cmd->pool);
-
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error defining database connection");
     errno = EINVAL;
@@ -602,8 +607,7 @@ static int sqlconf_read_db(pool *p) {
   cmd = sqlconf_cmd_alloc(p, 1, "sqlconf");
   res = sqlconf_dispatch(cmd, "sql_open_conn");
   destroy_pool(cmd->pool);
-
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error opening database connection");
     errno = EINVAL;
@@ -628,7 +632,7 @@ static int sqlconf_read_db(pool *p) {
     sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
     errno = ENOENT;
@@ -639,37 +643,50 @@ static int sqlconf_read_db(pool *p) {
 
   /* We only want _one_ unique base context.  Any more than that is a
    * configuration error in the database.
+   *
+   * However, if there is NO unique base context, then we ASSUME that the
+   * configuration data is empty, akin to an empty config file.
    */
-  if (sd->rnum != 1 &&
-      sd->fnum != 1) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": retrieving %s context failed: bad/non-unique results", which_id);
-    errno = ENOENT;
-    return -1;
+  if (sd->rnum != 0 &&
+      sd->fnum != 0) {
+    if (sd->rnum != 1 &&
+        sd->fnum != 1) {
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": retrieving %s context failed: bad/non-unique results", which_id);
+      errno = ENOENT;
+      return -1;
+    }
+
+    if (sd->data == NULL ||
+        sd->data[0] == NULL) {
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": retrieving %s context failed: no matching results", which_id);
+      errno = ENOENT;
+      return -1;
+    }
+
+    id = atoi(sd->data[0]);
   }
 
-  if (sd->data == NULL ||
-      sd->data[0] == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": retrieving %s context failed: no matching results", which_id);
-    errno = ENOENT;
-    return -1;
-  }
-
-  id = atoi(sd->data[0]);
   destroy_pool(cmd->pool);
 
   sqlconf_conf = make_array(conf_sql_pool, 1, sizeof(char *));
-  sqlconf_read_ctx(p, id, TRUE);
+  if (sd->rnum == 1 &&
+      sd->fnum == 1) {
+    sqlconf_read_ctx(p, id, TRUE);
+  }
 
   /* Close the connection. */
   cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
   res = sqlconf_dispatch(cmd, "sql_close_conn");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
 
-  if (!res) {
+    errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error closing database connection");
+      ": error closing database connection: %s",
+      errmsg ? errmsg : strerror(errno));
     errno = EINVAL;
     return -1;
   }
@@ -678,10 +695,12 @@ static int sqlconf_read_db(pool *p) {
   cmd = sqlconf_cmd_alloc(p, 0);
   res = sqlconf_dispatch(cmd, "sql_cleanup");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
 
-  if (!res) {
+    errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error cleaning up SQL system");
+      ": error cleaning up SQL system: %s", errmsg ? errmsg : strerror(errno));
     errno = EINVAL;
     return -1;
   }
@@ -735,6 +754,11 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
       return -1;
     }
 
+    if (sqlconf_conf == NULL &&
+        sqlconf_read_db(fh->fh_pool) < 0) {
+      return -1;
+    }
+
     /* Return a fake file descriptor. */
     return CONF_SQL_FILENO;
   }
@@ -758,11 +782,11 @@ static int sqlconf_fsio_read(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
       fh->fh_path != NULL &&
       strncmp(CONF_SQL_URI_PREFIX, fh->fh_path, CONF_SQL_URI_PREFIX_LEN) == 0) {
 
-    if (sqlconf_conf == NULL &&
-        sqlconf_read_db(fh->fh_pool) < 0) {
+    if (sqlconf_conf == NULL) {
+      errno = ENOENT;
       return -1;
     }
- 
+
     if (sqlconf_confi < sqlconf_conf->nelts) {
       char **lines = sqlconf_conf->elts;
      
