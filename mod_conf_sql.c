@@ -604,6 +604,12 @@ static int sqlconf_read_db(pool *p) {
   const char *username, *password, *dsn;
   char *where, *which_id = NULL;
 
+  /* For debugging, automatically, enable trace logging.
+   * XXX Make this configurable via params!
+   */
+  pr_trace_use_stderr(TRUE);
+  pr_trace_set_levels("sqlite", 1, 20);
+
   /* Load the SQL backend module we'll be using. */
   cmd = sqlconf_cmd_alloc(p, 0);
   res = sqlconf_dispatch(cmd, "sql_load_backend");
@@ -635,6 +641,8 @@ static int sqlconf_read_db(pool *p) {
   if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error defining database connection");
+
+    pr_trace_use_stderr(FALSE);
     errno = EINVAL;
     return -1;
   }
@@ -646,6 +654,8 @@ static int sqlconf_read_db(pool *p) {
   if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error opening database connection");
+
+    pr_trace_use_stderr(FALSE);
     errno = EINVAL;
     return -1;
   }
@@ -673,6 +683,7 @@ static int sqlconf_read_db(pool *p) {
       ": error retrieving %s context ID", which_id);
 
     (void) sqlconf_close_db(p);
+    pr_trace_use_stderr(FALSE);
     errno = ENOENT;
     return -1;
   }
@@ -693,6 +704,7 @@ static int sqlconf_read_db(pool *p) {
         ": retrieving %s context failed: bad/non-unique results", which_id);
 
       (void) sqlconf_close_db(p);
+      pr_trace_use_stderr(FALSE);
       errno = ENOENT;
       return -1;
     }
@@ -703,6 +715,7 @@ static int sqlconf_read_db(pool *p) {
         ": retrieving %s context failed: no matching results", which_id);
 
       (void) sqlconf_close_db(p);
+      pr_trace_use_stderr(FALSE);
       errno = ENOENT;
       return -1;
     }
@@ -719,9 +732,14 @@ static int sqlconf_read_db(pool *p) {
   }
 
   if (sqlconf_close_db(p) < 0) {
+    int xerrno = errno;
+
+    pr_trace_use_stderr(FALSE);
+    errno = xerrno;
     return -1;
   }
 
+  pr_trace_use_stderr(FALSE);
   return 0;
 }
 
