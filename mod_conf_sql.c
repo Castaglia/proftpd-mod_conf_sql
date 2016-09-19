@@ -271,12 +271,12 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_db.database = v;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.username: '%s'",
-    sqlconf_db.username);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.server: '%s'",
-    sqlconf_db.server);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.database: '%s'",
-    sqlconf_db.database);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.username = %s",
+    sqlconf_db.username ? sqlconf_db.username : "(none)");
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.server = %s",
+    sqlconf_db.server ? sqlconf_db.server : "(none)");
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.database = %s",
+    sqlconf_db.database ? sqlconf_db.database : "(none)");
 
   if (sqlconf_parse_ctx_param(p, params) < 0) {
     int xerrno = errno;
@@ -289,17 +289,17 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.table: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.table = %s",
     sqlconf_ctxs.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col = '%s",
     sqlconf_ctxs.id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col = %s",
     sqlconf_ctxs.parent_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key_col = %s",
     sqlconf_ctxs.key_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value_col = %s",
     sqlconf_ctxs.value_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where = %s",
     sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
   if (sqlconf_parse_conf_param(p, params) < 0) {
@@ -313,15 +313,15 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.table: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.table = %s",
     sqlconf_confs.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id_col = %s",
     sqlconf_confs.id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key_col = %s",
     sqlconf_confs.key_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value_col = %s",
     sqlconf_confs.value_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.where: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.where = %s",
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
   if (sqlconf_parse_map_param(p, params) < 0) {
@@ -335,13 +335,13 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.table: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.table = %s",
     sqlconf_maps.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id_col = %s",
     sqlconf_maps.conf_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id_col: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id_col = %s",
     sqlconf_maps.ctx_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.where: '%s'",
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.where = %s",
     sqlconf_maps.where ? sqlconf_maps.where : "(none)");
 
   v = pr_table_get(params, "base_id", NULL);
@@ -349,8 +349,8 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_ctxs.base_id = v;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id: '%s'",
-    sqlconf_ctxs.base_id);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id = %s",
+    sqlconf_ctxs.base_id ? sqlconf_ctxs.base_id : "(none)");
   return 0;
 }
 
@@ -567,8 +567,8 @@ static int sqlconf_read_db(pool *p) {
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
   sql_data_t *sd = NULL;
-  char *where = NULL;
-  char *which_id = NULL;
+  const char *username, *password, *dsn;
+  char *where, *which_id = NULL;
 
   /* Load the SQL backend module we'll be using. */
   cmd = sqlconf_cmd_alloc(p, 0);
@@ -581,9 +581,16 @@ static int sqlconf_read_db(pool *p) {
   destroy_pool(cmd->pool);
 
   /* Define the connection we'll be making. */
-  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_db.username,
-     sqlconf_db.password, pstrcat(p, sqlconf_db.database, "@",
-     sqlconf_db.server, NULL));
+  username = sqlconf_db.username;
+  password = sqlconf_db.password;
+  if (sqlconf_db.database != NULL) {
+    dsn = pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL);
+
+  } else {
+    dsn = sqlconf_db.server;
+  }
+
+  cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", username, password, dsn);
   res = sqlconf_dispatch(cmd, "sql_define_conn");
   destroy_pool(cmd->pool);
 
@@ -627,7 +634,7 @@ static int sqlconf_read_db(pool *p) {
   if (!res) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
-    errno = EPERM;
+    errno = ENOENT;
     return -1;
   }
 
@@ -640,7 +647,7 @@ static int sqlconf_read_db(pool *p) {
       sd->fnum != 1) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": retrieving %s context failed: bad/non-unique results", which_id);
-    errno = EPERM;
+    errno = ENOENT;
     return -1;
   }
 
@@ -648,7 +655,7 @@ static int sqlconf_read_db(pool *p) {
       sd->data[0] == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": retrieving %s context failed: no matching results", which_id);
-    errno = EPERM;
+    errno = ENOENT;
     return -1;
   }
 
@@ -688,12 +695,36 @@ static int sqlconf_read_db(pool *p) {
 /* FSIO callbacks
  */
 
-static int sqlconf_fsio_lstat_cb(pr_fs_t *fs, const char *path,
-    struct stat *st) {
-  return 0;
+static int sqlconf_fsio_fstat(pr_fh_t *fh, int fd, struct stat *st) {
+  if (fd == CONF_SQL_FILENO) {
+    /* Set a default "block size". */
+    st->st_blksize = 4096;
+
+    return 0;
+  }
+
+  return fstat(fd, st);
 }
 
-static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
+static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
+  /* Is this a path that we can use? */
+  if (strncmp("sql://", path, 6) == 0) {
+    return 0;
+  }
+
+  return lstat(path, st);
+}
+
+static int sqlconf_fsio_stat(pr_fs_t *fs, const char *path, struct stat *st) {
+  /* Is this a path that we can use? */
+  if (strncmp("sql://", path, 6) == 0) {
+    return 0;
+  }
+
+  return stat(path, st);
+}
+
+static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
 
   /* Is this a path that we can use? */
   if (strncmp("sql://", path, 6) == 0) {
@@ -715,13 +746,21 @@ static int sqlconf_fsio_open_cb(pr_fh_t *fh, const char *path, int flags) {
   return open(path, flags, PR_OPEN_MODE);
 }
 
-static int sqlconf_fsio_read_cb(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
+static int sqlconf_fsio_close(pr_fh_t *fh, int fd) {
+  if (fd == CONF_SQL_FILENO) {
+    return 0;
+  }
+
+  return close(fd);
+}
+
+static int sqlconf_fsio_read(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
 
   /* Make sure this filehandle is for this module before trying to use it. */
   if (fh->fh_path &&
       strncmp("sql://", fh->fh_path, 6) == 0) {
 
-    if (!sqlconf_conf &&
+    if (sqlconf_conf == NULL &&
         sqlconf_read_db(fh->fh_pool) < 0) {
       return -1;
     }
@@ -793,9 +832,12 @@ static void sqlconf_register(void) {
   /* Add the module's custom FS callbacks here. This module does not
    * provide callbacks for most of the operations.
    */
-  fs->lstat = sqlconf_fsio_lstat_cb;
-  fs->open = sqlconf_fsio_open_cb;
-  fs->read = sqlconf_fsio_read_cb;
+  fs->fstat = sqlconf_fsio_fstat;
+  fs->lstat = sqlconf_fsio_lstat;
+  fs->open = sqlconf_fsio_open;
+  fs->close = sqlconf_fsio_close;
+  fs->read = sqlconf_fsio_read;
+  fs->stat = sqlconf_fsio_stat;
 }
 
 static int sqlconf_init(void) {
