@@ -51,4 +51,4 @@ dist: clean
 
 # Run the API unit tests
 check:
-	test -z "$(ENABLE_TESTS)" || (cd t/ && $(MAKE) api-tests)
+	test -z "$(ENABLE_TESTS)" || (cd t/ && $(MAKE) api-tests integration-tests)
