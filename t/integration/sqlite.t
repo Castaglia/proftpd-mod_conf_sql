@@ -23,6 +23,9 @@ my $conf2sql = File::Spec->catfile($test_dir, '..', '..', 'conf2sql.pl');
 $conf2sql = realpath($conf2sql);
 print STDOUT "# conf2sql: $conf2sql\n";
 
+my $config_file = "$ENV{TRAVIS_BUILD_DIR}/proftpd/sample-configurations/basic.conf";
+print STDOUT "# config_file: $config_file\n";
+
 my ($ex, $res);
 my $db_file = "$tmpdir/proftpd.db";
 my $cmd = "sqlite3 $db_file < $db_script";
@@ -51,11 +54,7 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok(defined($ex), "failed to handle invalid SQLite URL");
 
-# XXX Use conf2sql.pl on the sample-configurations/basic.conf file to generate
-# the SQL script to use.
-my $config_script = "$tmpdir/config.sql";
-
-$cmd = "sqlite3 $db_file < $config_script";
+$cmd = "$conf2sql --dbdriver=sqlite --dbname=$db_file $config_file";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
