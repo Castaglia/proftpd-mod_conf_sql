@@ -2,7 +2,7 @@
 
 use strict;
 
-use Cwd qw(abs_path);
+use Cwd qw(abs_path realpath);
 use File::Path qw(mkpath rmtree);
 use File::Spec;
 use File::Temp qw(tempdir);
@@ -25,7 +25,7 @@ my $test_dir = (File::Spec->splitpath(abs_path(__FILE__)))[1];
 # e.g. to run the tests that come with third-party modules.
 unless (defined($ENV{PROFTPD_TEST_BIN})) {
   my $bin = File::Spec->catfile($test_dir, '..', '..', 'proftpd');
-  $ENV{PROFTPD_TEST_BIN} = File::Spec->canonpath($bin);
+  $ENV{PROFTPD_TEST_BIN} = realpath($bin);
 }
 
 $| = 1;
