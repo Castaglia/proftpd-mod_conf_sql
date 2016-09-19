@@ -1,5 +1,3 @@
-# Example PostgresqlSQL schema
-
 CREATE TABLE ftpctx IF NOT EXISTS (
   id SERIAL,
   parent_id INTEGER,

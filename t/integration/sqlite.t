@@ -11,7 +11,7 @@ my $tmpdir = $ARGV[0];
 print STDOUT "# tmpdir: $tmpdir\n";
 
 my $test_dir = (File::Spec->splitpath(abs_path(__FILE__)))[1];
-my $db_script = File::Spec->catfile($test_dir, '..', '..', 'sqlite-conf.sql');
+my $db_script = File::Spec->catfile($test_dir, '..', 'sqlite-conf.sql');
 $db_script = realpath($db_script);
 print STDOUT "# db_script: $db_script\n";
 
@@ -28,14 +28,14 @@ sub build_db {
   $check_exit_status = 0 unless defined $check_exit_status;
 
   if ($ENV{TEST_VERBOSE}) {
-    print STDERR "Executing sqlite3: $cmd\n";
+    print STDOUT "# Executing sqlite3: $cmd\n";
   }
 
   my @output = `$cmd`;
   my $exit_status = $?;
 
   if ($ENV{TEST_VERBOSE}) {
-    print STDERR "Output: ", join('', @output), "\n";
+    print STDOUT "# Output: ", join('', @output), "\n";
   }
 
   if ($check_exit_status) {

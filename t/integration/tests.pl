@@ -32,15 +32,9 @@ $| = 1;
 
 print STDOUT "# PROFTPD_TEST_BIN = $ENV{PROFTPD_TEST_BIN}\n";
 
-my $test_files;
-if (scalar(@ARGV) > 0) {
-  $test_files = [@ARGV];
-
-} else {
-  $test_files = [
-    ["$test_dir/sqlite.t", 'sqlite'],
-  ];
-}
+my $test_files = [
+  ["$test_dir/sqlite.t", 'sqlite'],
+];
 
 # Create a temp directory for each separate test, pass it in, cleanup afterward
 my $tap_test_args = {
@@ -57,7 +51,8 @@ if ($opts->{V}) {
 }
 
 my $harness = TAP::Harness->new($tap_opts);
-$harness->runtests(@$test_files) if scalar(@$test_files) > 0;
+my $aggregator = $harness->runtests(@$test_files);
+print STDOUT "Integration tests: ", $aggregator->get_status(), "\n";
 
 # Cleanup
 foreach my $alias (keys(%$tap_test_args)) {
@@ -65,7 +60,8 @@ foreach my $alias (keys(%$tap_test_args)) {
   rmtree($tmpdir);
 }
 
-exit 0;
+exit 0 if $aggregator->all_passed();
+exit 1;
 
 sub get_tmp_dir {
   ++$testno;

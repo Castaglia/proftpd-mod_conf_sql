@@ -1,5 +1,3 @@
-# Example SQLite schema
-
 CREATE TABLE IF NOT EXISTS ftpctx (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   parent_id INTEGER UNSIGNED,
