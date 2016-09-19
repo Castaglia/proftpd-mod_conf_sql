@@ -67,11 +67,11 @@ open(my $conf, "< $file") or die "$program: unable to read $file: $!\n";
 
 # The default/"server config" context
 my $ctx = {
-  'name' => $opts->{'ctx-prefix'} . '1',
-  'type' => 'default',
-  'value' => undef,
-  'directives' => [],
-  'contexts' => [],
+  name => $opts->{'ctx-prefix'} . '1',
+  type => 'default',
+  value => undef,
+  directives => [],
+  contexts => [],
 };
 
 my @ctxs = ();
@@ -144,10 +144,10 @@ while (chomp(my $line = <$conf>)) {
   } else {
 
     if ($line =~ /^(\S+)\s+(.*)$/) {
-      push(@{ $ctx->{directives} }, { type => $1, value => $2 });
+      push(@{ $ctx->{directives} }, { name => $1, value => $2 });
 
     } else {
-      push(@{ $ctx->{directives} }, { type => $line, value => '' }); 
+      push(@{ $ctx->{directives} }, { name => $line, value => '' });
     }
   }
 }
