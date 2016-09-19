@@ -68,7 +68,7 @@ open(my $conf, "< $file") or die "$program: unable to read $file: $!\n";
 # The default/"server config" context
 my $ctx = {
   'name' => $opts->{'ctx-prefix'} . '1',
-  'key' => 'default',
+  'type' => 'default',
   'value' => undef,
   'directives' => [],
   'contexts' => [],
@@ -111,17 +111,17 @@ while (chomp(my $line = <$conf>)) {
   if ($line =~ /^<[^\/]/) {
     $line =~ /^<(\S+)(\s+)?(.*)?>.*$/;
 
-    my ($key, $value) = ($1, $3);
+    my ($type, $value) = ($1, $3);
     $ctxno++;
     my $sub_ctx = {
-      'name' => $opts->{'ctx-prefix'} . $ctxno,
-      'key' => $key,
-      'value' => $value,
-      'directives' => [],
-      'contexts' => [],
+      name => $opts->{'ctx-prefix'} . $ctxno,
+      type => $type,
+      value => $value,
+      directives => [],
+      contexts => [],
     };
 
-    push(@{ $ctx->{'contexts'} }, $sub_ctx);
+    push(@{ $ctx->{contexts} }, $sub_ctx);
     unshift(@ctxs, $sub_ctx);
     $ctx = $sub_ctx;
 
@@ -132,8 +132,8 @@ while (chomp(my $line = <$conf>)) {
     $line =~ /^<\/(\S+).*?>$/;
 
     # Note: if the closing context name value doesn't match the current context
-    # key value, it's a syntax error in the config
-    if ($1 ne $ctx->{'key'}) {
+    # type value, it's a syntax error in the config
+    if ($1 ne $ctx->{type}) {
       die "$program: syntax error in $file, line $i ($line): improperly nested contexts\n";
     }
 
@@ -144,10 +144,10 @@ while (chomp(my $line = <$conf>)) {
   } else {
 
     if ($line =~ /^(\S+)\s+(.*)$/) {
-      push(@{ $ctx->{'directives'} }, { 'key' => $1, 'value' => $2 });
+      push(@{ $ctx->{directives} }, { type => $1, value => $2 });
 
     } else {
-      push(@{ $ctx->{'directives'} }, { 'key' => $line, 'value' => '' }); 
+      push(@{ $ctx->{directives} }, { type => $line, value => '' }); 
     }
   }
 }
@@ -234,16 +234,17 @@ sub process_ctx {
   my ($sql, $sth);
 
   # First, handle all of the configuration directives in this context
-  foreach my $conf (@{ $ctx->{'directives'} }) {
-    my $key = $dbh->quote($conf->{'key'});
-    my $value = $dbh->quote($conf->{'value'});
+  foreach my $conf (@{ $ctx->{directives} }) {
+    my $name = $dbh->quote($conf->{name});
+    my $value = $dbh->quote($conf->{value});
 
-    $sql = "INSERT INTO $opts->{'conf-tab'} (type, value) VALUES ($key, $value)";
+    $sql = "INSERT INTO $opts->{'conf-tab'} (name, value) VALUES ($name, $value)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
-    $sql = "SELECT id FROM $opts->{'conf-tab'} WHERE type = $key AND value = $value";
+    # XXX Consider using placeholders, for space-bearing values
+    $sql = "SELECT id FROM $opts->{'conf-tab'} WHERE name = $name AND value = $value";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $conf_id = ($sth->fetchrow_array())[0];
@@ -256,17 +257,17 @@ sub process_ctx {
   }
 
   # Next, handle any contained contexts in this context
-  foreach my $sub_ctx (@{ $ctx->{'contexts'} }) {
-    my $name = $dbh->quote($sub_ctx->{'name'});
-    my $key = $dbh->quote($sub_ctx->{'key'});
-    my $value = $dbh->quote($sub_ctx->{'value'});
+  foreach my $sub_ctx (@{ $ctx->{contexts} }) {
+    my $name = $dbh->quote($sub_ctx->{name});
+    my $type = $dbh->quote($sub_ctx->{type});
+    my $value = $dbh->quote($sub_ctx->{value});
 
-    $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES ($ctx_id, $name, $key, $value)";
+    $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES ($ctx_id, $name, $type, $value)";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     dbi_free_sql($sth);
 
-    $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = $key AND value = $value AND parent_id = $ctx_id";
+    $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = $type AND value = $value AND parent_id = $ctx_id";
     $sth = dbi_prep_sql($sql);
     dbi_exec_sql($sql, $sth);
     my $sub_ctx_id = ($sth->fetchrow_array())[0];

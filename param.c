@@ -28,10 +28,10 @@
 
 /* Expected format of the conf parameter:
  *
- *   conf=<table>[:id,key,value][:where=<clause>]
+ *   conf=<table>[:id,name,value][:where=<clause>]
  */
 int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
-    char **id_col, char **key_col, char **value_col, char **where) {
+    char **id_col, char **name_col, char **value_col, char **where) {
   const void *v, *val, *cols_val;
   size_t sz, vsz, valsz, cols_valsz;
   char *ptr;
@@ -40,7 +40,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
       params == NULL ||
       table == NULL ||
       id_col == NULL ||
-      key_col == NULL ||
+      name_col == NULL ||
       value_col == NULL ||
       where == NULL) {
     errno = EINVAL;
@@ -49,13 +49,13 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
 
   v = pr_table_get(params, "conf", &vsz);
   if (v == NULL) {
-    *table = *id_col = *key_col = *value_col = *where = NULL;
+    *table = *id_col = *name_col = *value_col = *where = NULL;
     return 0;
   }
 
   /* Ignore empty values.  Remember that table value lengths include the NUL. */
   if (vsz < 2) {
-    *table = *id_col = *key_col = *value_col = *where = NULL;
+    *table = *id_col = *name_col = *value_col = *where = NULL;
     return 0;
   }
 
@@ -67,7 +67,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
     /* Just the table name, then. */
     sz = vsz;
     *table = pstrndup(p, v, sz);
-    *id_col = *key_col = *value_col = *where = NULL;
+    *id_col = *name_col = *value_col = *where = NULL;
 
     return 0;
   }
@@ -75,7 +75,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
   sz = ptr - ((char *) v);
   *table = pstrndup(p, v, sz);
 
-  *id_col = *key_col = *value_col = *where = NULL;
+  *id_col = *name_col = *value_col = *where = NULL;
 
   v = ptr + 1;
   vsz = vsz - sz - 1;
@@ -121,7 +121,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
     }
 
     sz = ptr - (char *) cols_val;
-    *key_col = pstrndup(p, cols_val, sz);
+    *name_col = pstrndup(p, cols_val, sz);
 
     cols_val = ptr + 1;
     cols_valsz = cols_valsz - sz - 1;
@@ -157,10 +157,10 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
 
 /* Expected format of the ctx parameter:
  *
- *   ctx=<table>[:id,parent_id,key,value][:where=<clause>]
+ *   ctx=<table>[:id,parent_id,type,value][:where=<clause>]
  */
 int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
-    char **id_col, char **parent_id_col, char **key_col, char **value_col,
+    char **id_col, char **parent_id_col, char **type_col, char **value_col,
     char **where) {
   const void *v, *val, *cols_val;
   size_t sz, vsz, valsz, cols_valsz;
@@ -171,7 +171,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
       table == NULL ||
       id_col == NULL ||
       parent_id_col == NULL ||
-      key_col == NULL ||
+      type_col == NULL ||
       value_col == NULL ||
       where == NULL) {
     errno = EINVAL;
@@ -180,13 +180,13 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
 
   v = pr_table_get(params, "ctx", &vsz);
   if (v == NULL) {
-    *table = *id_col = *parent_id_col = *key_col = *value_col = *where = NULL;
+    *table = *id_col = *parent_id_col = *type_col = *value_col = *where = NULL;
     return 0;
   }
 
   /* Ignore empty values.  Remember that table value lengths include the NUL. */
   if (vsz < 2) {
-    *table = *id_col = *parent_id_col = *key_col = *value_col = *where = NULL;
+    *table = *id_col = *parent_id_col = *type_col = *value_col = *where = NULL;
     return 0;
   }
 
@@ -198,7 +198,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     /* Just the table name, then. */
     sz = vsz;
     *table = pstrndup(p, v, sz);
-    *id_col = *parent_id_col = *key_col = *value_col = *where = NULL;
+    *id_col = *parent_id_col = *type_col = *value_col = *where = NULL;
 
     return 0;
   }
@@ -206,7 +206,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
   sz = ptr - ((char *) v);
   *table = pstrndup(p, v, sz);
 
-  *id_col = *parent_id_col = *key_col = *value_col = *where = NULL;
+  *id_col = *parent_id_col = *type_col = *value_col = *where = NULL;
 
   v = ptr + 1;
   vsz = vsz - sz - 1;
@@ -266,7 +266,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
     }
 
     sz = ptr - (char *) cols_val;
-    *key_col = pstrndup(p, cols_val, sz);
+    *type_col = pstrndup(p, cols_val, sz);
 
     cols_val = ptr + 1;
     cols_valsz = cols_valsz - sz - 1;

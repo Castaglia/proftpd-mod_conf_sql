@@ -53,7 +53,7 @@ struct {
   const char *id_col;
 
   const char *parent_id_col;
-  const char *key_col;
+  const char *type_col;
   const char *value_col;
 
   const char *where;
@@ -64,7 +64,7 @@ struct {
 struct {
   const char *table;
   const char *id_col;
-  const char *key_col;
+  const char *name_col;
   const char *value_col;
 
   const char *where;
@@ -92,20 +92,20 @@ static void sqlconf_register(void);
 
 static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
   int res;
-  char *table, *id_col, *parent_id_col, *key_col, *value_col, *where;
+  char *table, *id_col, *parent_id_col, *type_col, *value_col, *where;
 
   /* Defaults */
   sqlconf_ctxs.table = CONF_SQL_CTX_DEFAULT_TABLE_NAME;
   sqlconf_ctxs.id_col = CONF_SQL_CTX_DEFAULT_ID_COL_NAME;
   sqlconf_ctxs.parent_id_col = CONF_SQL_CTX_DEFAULT_PARENT_ID_COL_NAME;
-  sqlconf_ctxs.key_col = CONF_SQL_CTX_DEFAULT_KEY_COL_NAME;
+  sqlconf_ctxs.type_col = CONF_SQL_CTX_DEFAULT_TYPE_COL_NAME;
   sqlconf_ctxs.value_col = CONF_SQL_CTX_DEFAULT_VALUE_COL_NAME;
   sqlconf_ctxs.where = NULL;
 
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
 
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   if (res < 0) {
     return -1;
   }
@@ -122,8 +122,8 @@ static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
     sqlconf_ctxs.parent_id_col = parent_id_col;
   }
 
-  if (key_col != NULL) {
-    sqlconf_ctxs.key_col = key_col;
+  if (type_col != NULL) {
+    sqlconf_ctxs.type_col = type_col;
   }
 
   if (value_col != NULL) {
@@ -139,18 +139,18 @@ static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
 
 static int sqlconf_parse_conf_param(pool *p, pr_table_t *params) {
   int res;
-  char *table, *id_col, *key_col, *value_col, *where;
+  char *table, *id_col, *name_col, *value_col, *where;
 
   /* Defaults */
   sqlconf_confs.table = CONF_SQL_CONF_DEFAULT_TABLE_NAME;
   sqlconf_confs.id_col = CONF_SQL_CONF_DEFAULT_ID_COL_NAME;
-  sqlconf_confs.key_col = CONF_SQL_CONF_DEFAULT_KEY_COL_NAME;
+  sqlconf_confs.name_col = CONF_SQL_CONF_DEFAULT_NAME_COL_NAME;
   sqlconf_confs.value_col = CONF_SQL_CONF_DEFAULT_VALUE_COL_NAME;
   sqlconf_confs.where = NULL;
 
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
 
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   if (res < 0) {
     return -1;
@@ -164,8 +164,8 @@ static int sqlconf_parse_conf_param(pool *p, pr_table_t *params) {
     sqlconf_confs.id_col = id_col;
   }
 
-  if (key_col != NULL) {
-    sqlconf_confs.key_col = key_col;
+  if (name_col != NULL) {
+    sqlconf_confs.name_col = name_col;
   }
 
   if (value_col != NULL) {
@@ -292,8 +292,8 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_ctxs.id_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col = %s",
     sqlconf_ctxs.parent_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key_col = %s",
-    sqlconf_ctxs.key_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.type_col = %s",
+    sqlconf_ctxs.type_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value_col = %s",
     sqlconf_ctxs.value_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where = %s",
@@ -314,8 +314,8 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_confs.table);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id_col = %s",
     sqlconf_confs.id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key_col = %s",
-    sqlconf_confs.key_col);
+  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.name_col = %s",
+    sqlconf_confs.name_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value_col = %s",
     sqlconf_confs.value_col);
   pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.where = %s",
@@ -456,14 +456,14 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   idstr[sizeof(idstr)-1] = '\0';
 
   if (sqlconf_confs.where == NULL) {
-    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+    query = pstrcat(p, sqlconf_confs.name_col, ", ", sqlconf_confs.value_col,
       " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
       " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
       sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
       sqlconf_maps.table, ".", sqlconf_maps.ctx_id_col, " = ", idstr, NULL);
 
   } else {
-    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+    query = pstrcat(p, sqlconf_confs.name_col, ", ", sqlconf_confs.value_col,
       " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
       " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
       sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
@@ -512,7 +512,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   }
 
   cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.table,
-    pstrcat(p, sqlconf_ctxs.key_col, ", ", sqlconf_ctxs.value_col, NULL),
+    pstrcat(p, sqlconf_ctxs.type_col, ", ", sqlconf_ctxs.value_col, NULL),
     where);
 
   res = sqlconf_dispatch(cmd, "sql_select");

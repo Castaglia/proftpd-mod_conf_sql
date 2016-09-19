@@ -29,26 +29,26 @@
 
 /* Expected format of the conf parameter:
  *
- *   conf=<table>[:id,key,value][:where=<clause>]
+ *   conf=<table>[:id,name,value][:where=<clause>]
  */
 int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
-  char **id_col, char **key_col, char **value_col, char **where);
+  char **id_col, char **name_col, char **value_col, char **where);
 #define CONF_SQL_CONF_DEFAULT_TABLE_NAME		"ftpconf"
 #define CONF_SQL_CONF_DEFAULT_ID_COL_NAME		"id"
-#define CONF_SQL_CONF_DEFAULT_KEY_COL_NAME		"key"
+#define CONF_SQL_CONF_DEFAULT_NAME_COL_NAME		"name"
 #define CONF_SQL_CONF_DEFAULT_VALUE_COL_NAME		"value"
 
 /* Expected format of the ctx parameter:
  *
- *   ctx=<table>[:id,parent_id,key,value][:where=<clause>]
+ *   ctx=<table>[:id,parent_id,type,value][:where=<clause>]
  */
 int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
-  char **id_col, char **parent_id_col, char **key_col, char **value_col,
+  char **id_col, char **parent_id_col, char **type_col, char **value_col,
   char **where);
 #define CONF_SQL_CTX_DEFAULT_TABLE_NAME			"ftpctx"
 #define CONF_SQL_CTX_DEFAULT_ID_COL_NAME		"id"
 #define CONF_SQL_CTX_DEFAULT_PARENT_ID_COL_NAME		"parent_id"
-#define CONF_SQL_CTX_DEFAULT_KEY_COL_NAME		"key"
+#define CONF_SQL_CTX_DEFAULT_TYPE_COL_NAME		"type"
 #define CONF_SQL_CTX_DEFAULT_VALUE_COL_NAME		"value"
 
 /* Expected format of the map parameter:

@@ -1,15 +1,15 @@
 CREATE TABLE ftpctx IF NOT EXISTS (
   id SERIAL,
   parent_id INTEGER,
-  name VARCHAR(255),
-  key VARCHAR(255),
-  value VARCHAR(255),
+  name TEXT,
+  type TEXT,
+  value TEXT,
   PRIMARY KEY (id)
 );
 
 CREATE TABLE ftpconf IF NOT EXISTS (
   id SERIAL,
-  key VARCHAR(255) NOT NULL,
+  name TEXT NOT NULL,
   value TEXT,
   PRIMARY KEY (id)
 );

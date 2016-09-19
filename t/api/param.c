@@ -43,11 +43,11 @@ static void tear_down(void) {
 
 /* Expected format of the conf parameter:
  *
- *   conf=<table>[:id,key,value][:where=<clause>]
+ *   conf=<table>[:id,name,value][:where=<clause>]
  */
 START_TEST (param_parse_conf_test) {
   int res;
-  char *table, *id_col, *key_col, *value_col, *where, *param, *expected;
+  char *table, *id_col, *name_col, *value_col, *where, *param, *expected;
   pr_table_t *params;
 
   mark_point();
@@ -78,19 +78,19 @@ START_TEST (param_parse_conf_test) {
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null key_col");
+  fail_unless(res < 0, "Failed to handle null name_col");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col, NULL,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col, NULL,
     NULL);
   fail_unless(res < 0, "Failed to handle null value_col");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, NULL);
   fail_unless(res < 0, "Failed to handle null where");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
@@ -100,12 +100,12 @@ START_TEST (param_parse_conf_test) {
   pr_table_empty(params);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   fail_unless(table == NULL, "Expected null, got table '%s'", table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
@@ -117,25 +117,25 @@ START_TEST (param_parse_conf_test) {
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   fail_unless(table == NULL, "Expected null, got table '%s'", table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with just the table name. */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "table";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "table";
@@ -143,20 +143,20 @@ START_TEST (param_parse_conf_test) {
   fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with table name and WHERE clause, no column names. */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "table::WHERE=bar";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "table";
@@ -164,7 +164,7 @@ START_TEST (param_parse_conf_test) {
   fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   expected = "WHERE=bar";
@@ -173,14 +173,14 @@ START_TEST (param_parse_conf_test) {
     expected, where);
 
   /* "conf" parameter with table name, and column names, and no WHERE clause. */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_key_col,my_val_col";
+  param = "my_table:my_id_col,my_name_col,my_val_col";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
@@ -191,10 +191,10 @@ START_TEST (param_parse_conf_test) {
   fail_unless(id_col != NULL, "Expected id_col, got null");
   fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_name_col";
+  fail_unless(name_col != NULL, "Expected name_col, got null");
+  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, name_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -202,14 +202,14 @@ START_TEST (param_parse_conf_test) {
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with table name, column names, and WHERE clause. */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_key_col,my_val_col:WHERE=barbaz";
+  param = "my_table:my_id_col,my_name_col,my_val_col:WHERE=barbaz";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
@@ -220,10 +220,10 @@ START_TEST (param_parse_conf_test) {
   fail_unless(id_col != NULL, "Expected id_col, got null");
   fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_name_col";
+  fail_unless(name_col != NULL, "Expected name_col, got null");
+  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, name_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -240,14 +240,14 @@ START_TEST (param_parse_conf_test) {
    *
    *  $ perl -MURI::Escape=uri_escape -e 'print uri_escape(...);'
    */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_key_col,my_val_col:WHERE=foo%20%3D%201%20AND%20bar%20%3D%20%27baz%27";
+  param = "my_table:my_id_col,my_name_col,my_val_col:WHERE=foo%20%3D%201%20AND%20bar%20%3D%20%27baz%27";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
@@ -258,10 +258,10 @@ START_TEST (param_parse_conf_test) {
   fail_unless(id_col != NULL, "Expected id_col, got null");
   fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_name_col";
+  fail_unless(name_col != NULL, "Expected name_col, got null");
+  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, name_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -272,28 +272,28 @@ START_TEST (param_parse_conf_test) {
     expected, where);
 
   /* Malformed "conf" parameters. */
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "foo:bar";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res < 0, "Failed to handle invalid conf param '%s': %s",
     param, strerror(errno));
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "foo::bar";
   pr_table_add(params, pstrdup(p, "conf"), pstrdup(p, param), 0);
 
   mark_point();
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   fail_unless(res < 0, "Failed to handle invalid conf param '%s': %s",
     param, strerror(errno));
@@ -307,11 +307,11 @@ END_TEST
 
 /* Expected format of the ctx parameter:
  *
- *   ctx=<table>[:id,parent_id,key,value][:where=<clause>]
+ *   ctx=<table>[:id,parent_id,type,value][:where=<clause>]
  */
 START_TEST (param_parse_ctx_test) {
   int res;
-  char *table, *id_col, *parent_id_col, *key_col, *value_col, *where;
+  char *table, *id_col, *parent_id_col, *type_col, *value_col, *where;
   char *param, *expected;
   pr_table_t *params;
 
@@ -352,20 +352,20 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null key_col");
+  fail_unless(res < 0, "Failed to handle null type_col");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, NULL, NULL);
+    &type_col, NULL, NULL);
   fail_unless(res < 0, "Failed to handle null value_col");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, NULL);
+    &type_col, &value_col, NULL);
   fail_unless(res < 0, "Failed to handle null where");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
@@ -375,13 +375,13 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   fail_unless(table == NULL, "Expected null, got table '%s'", table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
   fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
@@ -394,19 +394,19 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   fail_unless(table == NULL, "Expected null, got table '%s'", table);
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
   fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with just the table name. */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "table";
@@ -414,7 +414,7 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "table";
   fail_unless(table != NULL, "Expected table, got null");
@@ -423,13 +423,13 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
   fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with table name and WHERE clause, no column names. */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "table::WHERE=bar";
@@ -437,7 +437,7 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "table";
   fail_unless(table != NULL, "Expected table, got null");
@@ -446,7 +446,7 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
   fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(key_col == NULL, "Expected null, got key_col '%s'", key_col);
+  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
   fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   expected = "WHERE=bar";
@@ -455,15 +455,15 @@ START_TEST (param_parse_ctx_test) {
     expected, where);
 
   /* "ctx" parameter with table name, column names, and no WHERE clause. */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_parentid_col,my_key_col,my_val_col";
+  param = "my_table:my_id_col,my_parentid_col,my_type_col,my_val_col";
   pr_table_add(params, pstrdup(p, "ctx"), pstrdup(p, param), 0);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
   fail_unless(table != NULL, "Expected table, got null");
@@ -477,10 +477,10 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
   fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_type_col";
+  fail_unless(type_col != NULL, "Expected type_col, got null");
+  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, type_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -488,15 +488,15 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with table name, column names, and WHERE clause. */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_parentid_col,my_key_col,my_val_col:WHERE=barbaz";
+  param = "my_table:my_id_col,my_parentid_col,my_type_col,my_val_col:WHERE=barbaz";
   pr_table_add(params, pstrdup(p, "ctx"), pstrdup(p, param), 0);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
   fail_unless(table != NULL, "Expected table, got null");
@@ -510,10 +510,10 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
   fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_type_col";
+  fail_unless(type_col != NULL, "Expected type_col, got null");
+  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, type_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -530,15 +530,15 @@ START_TEST (param_parse_ctx_test) {
    *
    *  $ perl -MURI::Escape=uri_escape -e 'print uri_escape(...);'
    */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
-  param = "my_table:my_id_col,my_parentid_col,my_key_col,my_val_col:WHERE=foo+%3D+1+AND+bar+%3D+%27baz%27";
+  param = "my_table:my_id_col,my_parentid_col,my_type_col,my_val_col:WHERE=foo+%3D+1+AND+bar+%3D+%27baz%27";
   pr_table_add(params, pstrdup(p, "ctx"), pstrdup(p, param), 0);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
   fail_unless(table != NULL, "Expected table, got null");
@@ -552,10 +552,10 @@ START_TEST (param_parse_ctx_test) {
   fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
   fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
-  expected = "my_key_col";
-  fail_unless(key_col != NULL, "Expected key_col, got null");
-  fail_unless(strcmp(key_col, expected) == 0, "Expected '%s', got '%s'",
-    expected, key_col);
+  expected = "my_type_col";
+  fail_unless(type_col != NULL, "Expected type_col, got null");
+  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+    expected, type_col);
   expected = "my_val_col";
   fail_unless(value_col != NULL, "Expected value_col, got null");
   fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
@@ -566,7 +566,7 @@ START_TEST (param_parse_ctx_test) {
     expected, where);
 
   /* Malformed "ctx" parameters. */
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "foo:bar";
@@ -574,13 +574,13 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res < 0, "Failed to handle invalid ctx param '%s': %s",
     param, strerror(errno));
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
   pr_table_empty(params);
 
   param = "foo::bar";
@@ -588,7 +588,7 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   fail_unless(res < 0, "Failed to handle invalid ctx param '%s': %s",
     param, strerror(errno));
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,

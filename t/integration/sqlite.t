@@ -17,7 +17,6 @@ if ($ENV{TRAVIS_CI}) {
   $db_script = File::Spec->catfile($test_dir, '..', 'sqlite-conf.sql');
 }
 $db_script = realpath($db_script);
-print STDOUT "# db_script: $db_script\n";
 
 my $conf2sql = File::Spec->catfile($test_dir, '..', '..', 'conf2sql.pl');
 $conf2sql = realpath($conf2sql);
