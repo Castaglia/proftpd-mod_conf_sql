@@ -68,42 +68,42 @@ that the underlying database <b>must</b> support <code>INNER JOIN</code>s.
 Here is an example MySQL schema for the tables <code>mod_conf_sql</code>
 uses:
 <pre>
-  CREATE TABLE ftpctx IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpctx (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
     parent_id INTEGER UNSIGNED,
-    key VARCHAR(255),
+    type VARCHAR(255),
     value VARCHAR(255)
   );
 
-  CREATE TABLE ftpconf IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpconf (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    key VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     value BLOB
   );
 
-  CREATE TABLE ftpmap IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpmap (
     conf_id INTEGER UNSIGNED NOT NULL,
     ctx_id INTEGER UNSIGNED NOT NULL
   );
 </pre>
 Example PostgresQL schema:
 <pre>
-  CREATE TABLE ftpctx IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpctx (
     id SERIAL,
     parent_id INTEGER,
-    key VARCHAR(255),
-    value VARCHAR(255),
-    PRIMARY KEY (id)
-  );
-
-  CREATE TABLE ftpconf IF NOT EXISTS (
-    id SERIAL,
-    key VARCHAR(255) NOT NULL,
+    type TEXT,
     value TEXT,
     PRIMARY KEY (id)
   );
 
-  CREATE TABLE ftpmap IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpconf (
+    id SERIAL,
+    name TEXT NOT NULL,
+    value TEXT,
+    PRIMARY KEY (id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ftpmap (
     conf_id INTEGER NOT NULL,
     ctx_id INTEGER NOT NULL
   );
@@ -140,8 +140,8 @@ to the configuration file, using <code>proftpd</code>'s
 syntax:
 <pre>
   sql://<i>dbuser</i>:<i>dbpass</i>@<i>dbserver</i>?database=<i>dbname</i>
-    &amp;ctx=<i>table</i>[:<i>id,parent_id,key,value</i>][:where=<i>clause</i>]
-    &amp;conf=<i>table</i>[:<i>id,key,value</i>][:where=<i>clause</i>]
+    &amp;ctx=<i>table</i>[:<i>id,parent_id,type,value</i>][:where=<i>clause</i>]
+    &amp;conf=<i>table</i>[:<i>id,name,value</i>][:where=<i>clause</i>]
     &amp;map=<i>table</i>[:<i>conf_id,ctx_id</i>][:where=<i>clause</i>]
     [&amp;base_id=<i>id</i>]
 </pre>
@@ -178,7 +178,7 @@ shell control characters.
 Explicitly specifying the column names in the above URI would make the
 &quot;path&quot; look like:
 <pre>
-  $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx:id,parent_id,type,value&amp;conf=ftpconf:id,type,value&amp;map=ftpmap:conf_id,ctx_id'
+  $ proftpd -c 'sql://foo:bar@localhost?database=proftpd&amp;ctx=ftpctx:id,parent_id,key,value&amp;conf=ftpconf:id,key,value&amp;map=ftpmap:conf_id,ctx_id'
 </pre>
 This example shows a URI that causes <code>mod_conf_sql</code> to treat the
 context with an ID of of <em>baseid</em> as the toplevel configuration context,

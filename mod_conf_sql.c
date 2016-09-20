@@ -53,7 +53,7 @@ struct {
   const char *id_col;
 
   const char *parent_id_col;
-  const char *key_col;
+  const char *type_col;
   const char *value_col;
 
   const char *where;
@@ -64,7 +64,7 @@ struct {
 struct {
   const char *table;
   const char *id_col;
-  const char *key_col;
+  const char *name_col;
   const char *value_col;
 
   const char *where;
@@ -86,26 +86,28 @@ pool *conf_sql_pool = NULL;
 static array_header *sqlconf_conf = NULL;
 static unsigned int sqlconf_confi = 0;
 
+static const char *trace_channel = "conf_sql";
+
 /* Prototypes */
 static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase);
 static void sqlconf_register(void);
 
 static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
   int res;
-  char *table, *id_col, *parent_id_col, *key_col, *value_col, *where;
+  char *table, *id_col, *parent_id_col, *type_col, *value_col, *where;
 
   /* Defaults */
   sqlconf_ctxs.table = CONF_SQL_CTX_DEFAULT_TABLE_NAME;
   sqlconf_ctxs.id_col = CONF_SQL_CTX_DEFAULT_ID_COL_NAME;
   sqlconf_ctxs.parent_id_col = CONF_SQL_CTX_DEFAULT_PARENT_ID_COL_NAME;
-  sqlconf_ctxs.key_col = CONF_SQL_CTX_DEFAULT_KEY_COL_NAME;
+  sqlconf_ctxs.type_col = CONF_SQL_CTX_DEFAULT_TYPE_COL_NAME;
   sqlconf_ctxs.value_col = CONF_SQL_CTX_DEFAULT_VALUE_COL_NAME;
   sqlconf_ctxs.where = NULL;
 
-  table = id_col = parent_id_col = key_col = value_col = where = NULL;
+  table = id_col = parent_id_col = type_col = value_col = where = NULL;
 
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
-    &key_col, &value_col, &where);
+    &type_col, &value_col, &where);
   if (res < 0) {
     return -1;
   }
@@ -122,8 +124,8 @@ static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
     sqlconf_ctxs.parent_id_col = parent_id_col;
   }
 
-  if (key_col != NULL) {
-    sqlconf_ctxs.key_col = key_col;
+  if (type_col != NULL) {
+    sqlconf_ctxs.type_col = type_col;
   }
 
   if (value_col != NULL) {
@@ -139,18 +141,18 @@ static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
 
 static int sqlconf_parse_conf_param(pool *p, pr_table_t *params) {
   int res;
-  char *table, *id_col, *key_col, *value_col, *where;
+  char *table, *id_col, *name_col, *value_col, *where;
 
   /* Defaults */
   sqlconf_confs.table = CONF_SQL_CONF_DEFAULT_TABLE_NAME;
   sqlconf_confs.id_col = CONF_SQL_CONF_DEFAULT_ID_COL_NAME;
-  sqlconf_confs.key_col = CONF_SQL_CONF_DEFAULT_KEY_COL_NAME;
+  sqlconf_confs.name_col = CONF_SQL_CONF_DEFAULT_NAME_COL_NAME;
   sqlconf_confs.value_col = CONF_SQL_CONF_DEFAULT_VALUE_COL_NAME;
   sqlconf_confs.where = NULL;
 
-  table = id_col = key_col = value_col = where = NULL;
+  table = id_col = name_col = value_col = where = NULL;
 
-  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &key_col,
+  res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
   if (res < 0) {
     return -1;
@@ -164,8 +166,8 @@ static int sqlconf_parse_conf_param(pool *p, pr_table_t *params) {
     sqlconf_confs.id_col = id_col;
   }
 
-  if (key_col != NULL) {
-    sqlconf_confs.key_col = key_col;
+  if (name_col != NULL) {
+    sqlconf_confs.name_col = name_col;
   }
 
   if (value_col != NULL) {
@@ -225,7 +227,8 @@ static int sqlconf_parse_map_param(pool *p, pr_table_t *params) {
  *   &map:<table>[:conf_id,ctx_id][:where=<clause>]\
  *   [&base_id=<name>]
  */
-static int sqlconf_parse_uri(pool *p, const char *uri) {
+static int sqlconf_parse_uri(pool *p, const char *uri, char **driver,
+    int *use_tracing) {
   int res, xerrno;
   char *host = NULL, *path = NULL, *username, *password;
   unsigned int port = 0;
@@ -240,7 +243,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": failed parsing connect portion of URI '%.100s': %s", uri,
+      ": failed parsing connect portion of URI '%.200s': %s", uri,
       strerror(xerrno));
 
     pr_table_free(params);
@@ -261,22 +264,40 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
 
   sqlconf_db.username = pstrdup(p, username);
   sqlconf_db.password = pstrdup(p, password);
-  sqlconf_db.database = pstrdup(p, path);
+
+  /* Advance one character past the path separator to get the database/schema
+   * name.
+   */
+  if (path != NULL) {
+    sqlconf_db.database = pstrdup(p, path + 1);
+  }
 
   v = pr_table_get(params, "database", NULL);
   if (v != NULL) {
     sqlconf_db.database = v;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.username = %s",
+  v = pr_table_get(params, "tracing", NULL);
+  if (v != NULL) {
+    res = pr_str_is_boolean(v);
+    if (res == TRUE) {
+      *use_tracing = TRUE;
+      pr_trace_use_stderr(*use_tracing);
+
+      /* TODO: Make the trace level a param as well. */
+      pr_trace_set_levels(trace_channel, 1, 20);
+    }
+  }
+
+  pr_trace_msg(trace_channel, 6, "db.username = %s",
     sqlconf_db.username ? sqlconf_db.username : "(none)");
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.server = %s",
+  pr_trace_msg(trace_channel, 6, "db.server = %s",
     sqlconf_db.server ? sqlconf_db.server : "(none)");
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": db.database = %s",
+  pr_trace_msg(trace_channel, 6, "db.database = %s",
     sqlconf_db.database ? sqlconf_db.database : "(none)");
 
   if (sqlconf_parse_ctx_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing context table portion of URI '%.100s': %s", uri,
@@ -286,21 +307,17 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.table = %s",
-    sqlconf_ctxs.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.id_col = %s",
-    sqlconf_ctxs.id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.parent_id_col = %s",
+  pr_trace_msg(trace_channel, 6, "ctx.table = %s", sqlconf_ctxs.table);
+  pr_trace_msg(trace_channel, 6, "ctx.id_col = %s", sqlconf_ctxs.id_col);
+  pr_trace_msg(trace_channel, 6, "ctx.parent_id_col = %s",
     sqlconf_ctxs.parent_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.key_col = %s",
-    sqlconf_ctxs.key_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.value_col = %s",
-    sqlconf_ctxs.value_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctx.where = %s",
+  pr_trace_msg(trace_channel, 6, "ctx.type_col = %s", sqlconf_ctxs.type_col);
+  pr_trace_msg(trace_channel, 6, "ctx.value_col = %s", sqlconf_ctxs.value_col);
+  pr_trace_msg(trace_channel, 6, "ctx.where = %s",
     sqlconf_ctxs.where ? sqlconf_ctxs.where : "(none)");
 
   if (sqlconf_parse_conf_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing directive table portion of URI '%.100s': %s", uri,
@@ -310,19 +327,16 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.table = %s",
-    sqlconf_confs.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.id_col = %s",
-    sqlconf_confs.id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.key_col = %s",
-    sqlconf_confs.key_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.value_col = %s",
+  pr_trace_msg(trace_channel, 6, "conf.table = %s", sqlconf_confs.table);
+  pr_trace_msg(trace_channel, 6, "conf.id_col = %s", sqlconf_confs.id_col);
+  pr_trace_msg(trace_channel, 6, "conf.name_col = %s", sqlconf_confs.name_col);
+  pr_trace_msg(trace_channel, 6, "conf.value_col = %s",
     sqlconf_confs.value_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": conf.where = %s",
+  pr_trace_msg(trace_channel, 6, "conf.where = %s",
     sqlconf_confs.where ? sqlconf_confs.where : "(none)");
 
   if (sqlconf_parse_map_param(p, params) < 0) {
-    int xerrno = errno;
+    xerrno = errno;
 
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": failed parsing map table portion of URI '%.100s': %s", uri,
@@ -332,13 +346,12 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     return -1;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.table = %s",
-    sqlconf_maps.table);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.conf_id_col = %s",
+  pr_trace_msg(trace_channel, 6, "map.table = %s", sqlconf_maps.table);
+  pr_trace_msg(trace_channel, 6, "map.conf_id_col = %s",
     sqlconf_maps.conf_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.ctx_id_col = %s",
+  pr_trace_msg(trace_channel, 6, "map.ctx_id_col = %s",
     sqlconf_maps.ctx_id_col);
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": map.where = %s",
+  pr_trace_msg(trace_channel, 6, "map.where = %s",
     sqlconf_maps.where ? sqlconf_maps.where : "(none)");
 
   v = pr_table_get(params, "base_id", NULL);
@@ -346,8 +359,21 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
     sqlconf_ctxs.base_id = v;
   }
 
-  pr_log_debug(DEBUG6, MOD_CONF_SQL_VERSION ": ctxs.base_id = %s",
+  pr_trace_msg(trace_channel, 6, "ctxs.base_id = %s",
     sqlconf_ctxs.base_id ? sqlconf_ctxs.base_id : "(none)");
+
+  /* Look for a specific database backend/driver to use. */
+  v = pr_table_get(params, "driver", NULL);
+  if (v != NULL) {
+    *driver = pstrdup(p, (char *) v);
+    pr_trace_msg(trace_channel, 6, "driver = %s", *driver);
+  }
+
+  if (*use_tracing) {
+    pr_trace_set_levels(trace_channel, 0, 0);
+    pr_trace_use_stderr(FALSE);
+  }
+
   return 0;
 }
 
@@ -357,7 +383,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri) {
 /* Note: mod_sql.c doesn't expose this function, so we'll need our own copy
  * of it.
  */
-static cmd_rec *sqlconf_cmd_alloc(pool *p, int argc, ...) {
+static cmd_rec *sqlconf_cmd_alloc(pool *p, unsigned int argc, ...) {
   pool *sub_pool = NULL;
   cmd_rec *cmd = NULL;
   va_list args;
@@ -369,13 +395,14 @@ static cmd_rec *sqlconf_cmd_alloc(pool *p, int argc, ...) {
   cmd->stash_index = -1;
   cmd->pool = sub_pool;
 
-  cmd->argv = pcalloc(sub_pool, sizeof(void *) * (argc));
+  cmd->argv = pcalloc(sub_pool, sizeof(void *) * (argc + 1));
   cmd->tmp_pool = sub_pool;
 
   va_start(args, argc);
 
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < argc; i++) {
     cmd->argv[i] = (void *) va_arg(args, char *);
+  }
   va_end(args);
 
   return cmd;
@@ -389,16 +416,15 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
   if (cmdtab == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": unable to find SQL hook symbol '%s'", name);
+    errno = ENOENT;
     return PR_ERROR(cmd);
   }
 
   res = pr_module_call(cmdtab->m, cmdtab->handler, cmd);
-
-  /* Do some sanity checks on the returned response. */
   if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": '%s' error: %s", name,
       res->mr_message);
-    return NULL;
+    return res;
   }
 
   return res;
@@ -431,8 +457,17 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
     sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res)
+  if (MODRET_ISERROR(res)) {
+    int xerrno = errno;
+    const char *errmsg;
+
+    errmsg = MODRET_ERRMSG(res);
+    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s",
+      errmsg ? errmsg : "(unknown)");
+
+    errno = xerrno;
     return -1;
+  }
 
   sd = res->data;
 
@@ -456,14 +491,14 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   idstr[sizeof(idstr)-1] = '\0';
 
   if (sqlconf_confs.where == NULL) {
-    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+    query = pstrcat(p, sqlconf_confs.name_col, ", ", sqlconf_confs.value_col,
       " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
       " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
       sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
       sqlconf_maps.table, ".", sqlconf_maps.ctx_id_col, " = ", idstr, NULL);
 
   } else {
-    query = pstrcat(p, sqlconf_confs.key_col, ", ", sqlconf_confs.value_col,
+    query = pstrcat(p, sqlconf_confs.name_col, ", ", sqlconf_confs.value_col,
       " FROM ", sqlconf_confs.table, " INNER JOIN ", sqlconf_maps.table,
       " ON ", sqlconf_confs.table, ".", sqlconf_confs.id_col, " = ",
       sqlconf_maps.table, ".", sqlconf_maps.conf_id_col, " WHERE ",
@@ -474,8 +509,17 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", query);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res)
+  if (MODRET_ISERROR(res)) {
+    int xerrno = errno;
+    const char *errmsg;
+
+    errmsg = MODRET_ERRMSG(res);
+    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s",
+      errmsg ? errmsg : "(unknown)");
+
+    errno = xerrno;
     return -1;
+  }
 
   sd = res->data;
 
@@ -511,11 +555,11 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   }
 
   cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", sqlconf_ctxs.table,
-    pstrcat(p, sqlconf_ctxs.key_col, ", ", sqlconf_ctxs.value_col, NULL),
+    pstrcat(p, sqlconf_ctxs.type_col, ", ", sqlconf_ctxs.value_col, NULL),
     where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG4, MOD_CONF_SQL_VERSION
       ": notice: context ID (%d) has no associated key/value", ctx_id);
     errno = ENOENT;
@@ -558,8 +602,56 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   return 0;
 }
 
+static int sqlconf_close_db(pool *p, int use_tracing) {
+  int res = 0, xerrno = 0;
+  cmd_rec *cmd = NULL;
+  modret_t *mr = NULL;
+
+  /* Close the connection. */
+  cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
+  mr = sqlconf_dispatch(cmd, "sql_close_conn");
+  destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(mr)) {
+    const char *errmsg;
+
+    errmsg = MODRET_ERRMSG(mr);
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error closing database connection: %s",
+      errmsg ? errmsg : strerror(errno));
+
+    xerrno = EINVAL;
+    res = -1;
+  }
+
+  if (res == 0) {
+    /* Cleanup the SQL subsystem. */
+    cmd = sqlconf_cmd_alloc(p, 0);
+    mr = sqlconf_dispatch(cmd, "sql_cleanup");
+    destroy_pool(cmd->pool);
+    if (MODRET_ISERROR(mr)) {
+      const char *errmsg;
+
+      errmsg = MODRET_ERRMSG(mr);
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": error cleaning up SQL system: %s",
+        errmsg ? errmsg : strerror(errno));
+
+      xerrno = EINVAL;
+      res = -1;
+    }
+  }
+
+  if (use_tracing) {
+    pr_trace_use_stderr(FALSE);
+    pr_trace_set_levels(trace_channel, 0, 0);
+  }
+
+  errno = xerrno;
+  return res;
+}
+
 /* Construct the configuration file from the database contents. */
-static int sqlconf_read_db(pool *p) {
+static int sqlconf_read_db(pool *p, char *driver, int use_tracing) {
   int id = 0;
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
@@ -567,15 +659,40 @@ static int sqlconf_read_db(pool *p) {
   const char *username, *password, *dsn;
   char *where, *which_id = NULL;
 
+  if (use_tracing) {
+    pr_trace_use_stderr(TRUE);
+
+    /* TODO: Make the trace level a param as well. */
+    pr_trace_set_levels(trace_channel, 1, 20);
+  }
+
   /* Load the SQL backend module we'll be using. */
-  cmd = sqlconf_cmd_alloc(p, 0);
+  if (driver == NULL) {
+    cmd = sqlconf_cmd_alloc(p, 0);
+
+  } else {
+    /* The mod_sql_sqlite module uses a backend name of "sqlite3"; check
+     * the driver name to see if that what was intended.
+     */
+    if (strcasecmp(driver, "sqlite") == 0) {
+      driver = pstrdup(p, "sqlite3");
+    }
+
+    cmd = sqlconf_cmd_alloc(p, 1, driver);
+  }
+
   res = sqlconf_dispatch(cmd, "sql_load_backend");
   destroy_pool(cmd->pool);
+
+/* XXX What if mod_sql is not built/loaded? */
+/* XXX What if desired backend is not built/loaded? */
 
   /* Prepare the SQL subsystem. */
   cmd = sqlconf_cmd_alloc(p, 1, make_sub_pool(p));
   res = sqlconf_dispatch(cmd, "sql_prepare");
   destroy_pool(cmd->pool);
+
+/* XXX What if this preparation fails? */
 
   /* Define the connection we'll be making. */
   username = sqlconf_db.username;
@@ -590,10 +707,19 @@ static int sqlconf_read_db(pool *p) {
   cmd = sqlconf_cmd_alloc(p, 4, "sqlconf", username, password, dsn);
   res = sqlconf_dispatch(cmd, "sql_define_conn");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
 
-  if (!res) {
+    errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error defining database connection");
+      ": error defining database connection: %s",
+      errmsg ? errmsg : strerror(errno));
+
+    if (use_tracing) {
+      pr_trace_set_levels(trace_channel, 0, 0);
+      pr_trace_use_stderr(FALSE);
+    }
+
     errno = EINVAL;
     return -1;
   }
@@ -602,10 +728,14 @@ static int sqlconf_read_db(pool *p) {
   cmd = sqlconf_cmd_alloc(p, 1, "sqlconf");
   res = sqlconf_dispatch(cmd, "sql_open_conn");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
 
-  if (!res) {
+    errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error opening database connection");
+      ": error opening database connection: %s",
+      errmsg ? errmsg : strerror(errno));
+
     errno = EINVAL;
     return -1;
   }
@@ -628,9 +758,11 @@ static int sqlconf_read_db(pool *p) {
     sqlconf_ctxs.id_col, where);
 
   res = sqlconf_dispatch(cmd, "sql_select");
-  if (!res) {
+  if (MODRET_ISERROR(res)) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
+
+    (void) sqlconf_close_db(p, use_tracing);
     errno = ENOENT;
     return -1;
   }
@@ -639,50 +771,44 @@ static int sqlconf_read_db(pool *p) {
 
   /* We only want _one_ unique base context.  Any more than that is a
    * configuration error in the database.
+   *
+   * However, if there is NO unique base context, then we ASSUME that the
+   * configuration data is empty, akin to an empty config file.
    */
-  if (sd->rnum != 1 &&
-      sd->fnum != 1) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": retrieving %s context failed: bad/non-unique results", which_id);
-    errno = ENOENT;
-    return -1;
+  if (sd->rnum != 0 &&
+      sd->fnum != 0) {
+    if (sd->rnum != 1 &&
+        sd->fnum != 1) {
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": retrieving %s context failed: bad/non-unique results", which_id);
+
+      (void) sqlconf_close_db(p, use_tracing);
+      errno = ENOENT;
+      return -1;
+    }
+
+    if (sd->data == NULL ||
+        sd->data[0] == NULL) {
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": retrieving %s context failed: no matching results", which_id);
+
+      (void) sqlconf_close_db(p, use_tracing);
+      errno = ENOENT;
+      return -1;
+    }
+
+    id = atoi(sd->data[0]);
   }
 
-  if (sd->data == NULL ||
-      sd->data[0] == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": retrieving %s context failed: no matching results", which_id);
-    errno = ENOENT;
-    return -1;
-  }
-
-  id = atoi(sd->data[0]);
   destroy_pool(cmd->pool);
 
   sqlconf_conf = make_array(conf_sql_pool, 1, sizeof(char *));
-  sqlconf_read_ctx(p, id, TRUE);
-
-  /* Close the connection. */
-  cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
-  res = sqlconf_dispatch(cmd, "sql_close_conn");
-  destroy_pool(cmd->pool);
-
-  if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error closing database connection");
-    errno = EINVAL;
-    return -1;
+  if (sd->rnum == 1 &&
+      sd->fnum == 1) {
+    sqlconf_read_ctx(p, id, TRUE);
   }
 
-  /* Cleanup the SQL subsystem. */
-  cmd = sqlconf_cmd_alloc(p, 0);
-  res = sqlconf_dispatch(cmd, "sql_cleanup");
-  destroy_pool(cmd->pool);
-
-  if (!res) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error cleaning up SQL system");
-    errno = EINVAL;
+  if (sqlconf_close_db(p, use_tracing) < 0) {
     return -1;
   }
 
@@ -726,12 +852,19 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
   /* Is this a path that we can use? */
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     pool *p;
+    char *driver = NULL, *uri;
+    int use_tracing = FALSE;
 
     p = conf_sql_pool;
-    char *uri = pstrdup(p, path);
+    uri = pstrdup(p, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
-    if (sqlconf_parse_uri(p, uri) < 0) {
+    if (sqlconf_parse_uri(p, uri, &driver, &use_tracing) < 0) {
+      return -1;
+    }
+
+    if (sqlconf_conf == NULL &&
+        sqlconf_read_db(p, driver, use_tracing) < 0) {
       return -1;
     }
 
@@ -758,18 +891,17 @@ static int sqlconf_fsio_read(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
       fh->fh_path != NULL &&
       strncmp(CONF_SQL_URI_PREFIX, fh->fh_path, CONF_SQL_URI_PREFIX_LEN) == 0) {
 
-    if (sqlconf_conf == NULL &&
-        sqlconf_read_db(fh->fh_pool) < 0) {
+    if (sqlconf_conf == NULL) {
+      errno = ENOENT;
       return -1;
     }
- 
+
     if (sqlconf_confi < sqlconf_conf->nelts) {
       char **lines = sqlconf_conf->elts;
      
       /* Read from our built-up buffer, until there are no more lines to be
        * read.
        */
-      pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": %s", lines[sqlconf_confi]);
       memcpy(buf, lines[sqlconf_confi++], buflen);
       return strlen(buf);
     }

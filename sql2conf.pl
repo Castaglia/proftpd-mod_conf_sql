@@ -122,7 +122,7 @@ sub get_ctx {
   dbi_exec_sql($sql, $sth);
 
   $ctx->{id} = $id;
-  ($ctx->{key}, $ctx->{value}) = ($sth->fetchrow_array())[0, 1];
+  ($ctx->{type}, $ctx->{value}) = ($sth->fetchrow_array())[0, 1];
   dbi_free_sql($sth);
 
   $ctx->{directives} = get_ctx_directives($id);
@@ -161,7 +161,7 @@ sub get_ctx_directives {
   my $dir_tab = $opts->{'conf-tab'};
   my $map_tab = $opts->{'map-tab'};
 
-  my $sql = "SELECT id, type, value FROM $dir_tab INNER JOIN $map_tab " .
+  my $sql = "SELECT id, name, value FROM $dir_tab INNER JOIN $map_tab " .
             " ON $dir_tab.id = $map_tab.conf_id" .
             " WHERE $map_tab.ctx_id = $ctx_id";
 
@@ -170,8 +170,8 @@ sub get_ctx_directives {
 
   my $directives;
   while (my @row = $sth->fetchrow_array()) {
-    my ($id, $key, $value) = @row;
-    push(@$directives, { id => $id, key => $key, value => $value });
+    my ($id, $name, $value) = @row;
+    push(@$directives, { id => $id, name => $name, value => $value });
   }
 
   dbi_free_sql($sth);
@@ -190,7 +190,7 @@ sub show_ctxs {
 
   foreach my $ctx (@$ctxs) {
     print STDOUT "\n";
-    print STDOUT ' ' x $indent, "<$ctx->{key}",
+    print STDOUT ' ' x $indent, "<$ctx->{type}",
       $ctx->{value} ? " $ctx->{value}" : '', ">";
 
     if ($opts->{'show-tags'}) {
@@ -202,7 +202,7 @@ sub show_ctxs {
     show_directives($ctx->{directives}, $indent + 2);
     show_ctxs($ctx->{contexts}, $indent + 2);
 
-    print STDOUT ' ' x $indent, "</$ctx->{key}>\n";
+    print STDOUT ' ' x $indent, "</$ctx->{type}>\n";
   }
 }
 
@@ -210,7 +210,7 @@ sub show_directives {
   my ($directives, $indent) = @_;
 
   foreach my $directive (@$directives) {
-    print STDOUT ' ' x $indent, "$directive->{key} $directive->{value}";
+    print STDOUT ' ' x $indent, "$directive->{name} $directive->{value}";
 
     if ($opts->{'show-tags'}) {
       print STDOUT " ($opts->{'conf-tab'}, id $directive->{id})";
