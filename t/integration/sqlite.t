@@ -41,14 +41,14 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple SQLite URL again");
 
-my $complex_url = "sql://$db_file?database=proftpd&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+my $complex_url = "sql://$db_file?ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 $cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex SQLite URL");
 
-my $bad_url = "sql://$db_file?database=proftpd&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
+my $bad_url = "sql://$db_file?ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
 $cmd = "$proftpd -td10 -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
