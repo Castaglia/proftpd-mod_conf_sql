@@ -643,6 +643,7 @@ static int sqlconf_read_db(pool *p) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error defining database connection");
 
+    pr_trace_set_levels("sqlite", 0, 0);
     pr_trace_use_stderr(FALSE);
     errno = EINVAL;
     return -1;
@@ -656,6 +657,7 @@ static int sqlconf_read_db(pool *p) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error opening database connection");
 
+    pr_trace_set_levels("sqlite", 0, 0);
     pr_trace_use_stderr(FALSE);
     errno = EINVAL;
     return -1;
@@ -684,6 +686,7 @@ static int sqlconf_read_db(pool *p) {
       ": error retrieving %s context ID", which_id);
 
     (void) sqlconf_close_db(p);
+    pr_trace_set_levels("sqlite", 0, 0);
     pr_trace_use_stderr(FALSE);
     errno = ENOENT;
     return -1;
@@ -705,6 +708,7 @@ static int sqlconf_read_db(pool *p) {
         ": retrieving %s context failed: bad/non-unique results", which_id);
 
       (void) sqlconf_close_db(p);
+      pr_trace_set_levels("sqlite", 0, 0);
       pr_trace_use_stderr(FALSE);
       errno = ENOENT;
       return -1;
@@ -716,6 +720,7 @@ static int sqlconf_read_db(pool *p) {
         ": retrieving %s context failed: no matching results", which_id);
 
       (void) sqlconf_close_db(p);
+      pr_trace_set_levels("sqlite", 0, 0);
       pr_trace_use_stderr(FALSE);
       errno = ENOENT;
       return -1;
@@ -735,11 +740,13 @@ static int sqlconf_read_db(pool *p) {
   if (sqlconf_close_db(p) < 0) {
     int xerrno = errno;
 
+    pr_trace_set_levels("sqlite", 0, 0);
     pr_trace_use_stderr(FALSE);
     errno = xerrno;
     return -1;
   }
 
+  pr_trace_set_levels("sqlite", 0, 0);
   pr_trace_use_stderr(FALSE);
   return 0;
 }
