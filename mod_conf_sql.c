@@ -716,10 +716,16 @@ static int sqlconf_read_db(pool *p, char *driver) {
     return -1;
   }
 
-  /* Define the connection we'll be making. */
+  /* Define the connection we'll be making.
+   *
+   * IFF we have a username, password, AND database, we assume we need to
+   * use a DSN formatted for a network-connected database.
+   */
   username = sqlconf_db.username;
   password = sqlconf_db.password;
-  if (sqlconf_db.database != NULL) {
+  if (sqlconf_db.username != NULL &&
+      sqlconf_db.password != NULL &&
+      sqlconf_db.database != NULL) {
     dsn = pstrcat(p, sqlconf_db.database, "@", sqlconf_db.server, NULL);
 
   } else {

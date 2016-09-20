@@ -329,14 +329,6 @@ prefix, followed by the full path to the SQLite database file:
 <pre>
   sql:///path/to/sqlite.db
 </pre>
-<b>Important</b>: When using a SQL URL to a SQLite database, do <b>not</b>
-use the <em>database</em> query parameter, <i>e.g.</i>:
-<pre>
-  sql:///path/to/sqlite.db?database=proftpd
-</pre>
-The internal heuristics that <code>mod_conf_sql</code> uses when determining
-how <i>exactly</i> to connect to the database in question use the database
-name as a factor; for SQLite databases, that name is <b>not</b> needed.
 
 <p>
 <hr>
