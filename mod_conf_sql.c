@@ -458,7 +458,8 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
     const char *errmsg;
 
     errmsg = MODRET_ERRMSG(res);
-    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s", errmsg);
+    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s",
+      errmsg ? errmsg : "(unknown)");
 
     errno = xerrno;
     return -1;
@@ -509,7 +510,8 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
     const char *errmsg;
 
     errmsg = MODRET_ERRMSG(res);
-    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s", errmsg);
+    pr_trace_msg(trace_channel, 9, "SQL SELECT error: %s",
+      errmsg ? errmsg : "(unknown)");
 
     errno = xerrno;
     return -1;
@@ -687,7 +689,8 @@ static int sqlconf_read_db(pool *p, const char *driver) {
 
     errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error defining database connection: %s", errmsg);
+      ": error defining database connection: %s",
+      errmsg ? errmsg : strerror(errno));
 
     errno = EINVAL;
     return -1;
@@ -702,7 +705,8 @@ static int sqlconf_read_db(pool *p, const char *driver) {
 
     errmsg = MODRET_ERRMSG(res);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error opening database connection: %s", errmsg);
+      ": error opening database connection: %s",
+      errmsg ? errmsg : strerror(errno));
 
     errno = EINVAL;
     return -1;
@@ -831,7 +835,7 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
     }
 
     if (sqlconf_conf == NULL &&
-        sqlconf_read_db(fh->fh_pool, driver) < 0) {
+        sqlconf_read_db(p, driver) < 0) {
       return -1;
     }
 
