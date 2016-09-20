@@ -85,6 +85,12 @@ pool *conf_sql_pool = NULL;
 
 static array_header *sqlconf_conf = NULL;
 static unsigned int sqlconf_confi = 0;
+
+/* This pool is a sub-pool of the module pool, and is used for the info in
+ * the sqlconf_conf array header.
+ */
+static pool *sqlconf_conf_pool = NULL;
+
 static int use_tracing = FALSE;
 
 static const char *trace_channel = "conf_sql";
@@ -573,9 +579,17 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   }
 
   ctx_key = sd->data[0];
-  ctx_val = sd->data[1];
+  if (sd->fnum > 1) {
+    size_t len;
 
-  if (ctx_key &&
+    ctx_val = sd->data[1];
+    len = strlen(ctx_val);
+    if (len == 0) {
+      ctx_val = NULL;
+    }
+  }
+
+  if (ctx_key != NULL &&
       !isbase) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "<",
       ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
@@ -589,7 +603,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
     return -1;
   }
 
-  if (ctx_key &&
+  if (ctx_key != NULL &&
       !isbase) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "</",
       ctx_key, ">\n", NULL);
@@ -781,7 +795,7 @@ static int sqlconf_read_db(pool *p, char *driver) {
 
   destroy_pool(cmd->pool);
 
-  sqlconf_conf = make_array(conf_sql_pool, 1, sizeof(char *));
+  sqlconf_conf = make_array(p, 1, sizeof(char *));
   if (sd->rnum == 1 &&
       sd->fnum == 1) {
     sqlconf_read_ctx(p, id, TRUE);
@@ -833,7 +847,10 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
     pool *p;
     char *driver = NULL, *uri;
 
-    p = conf_sql_pool;
+    sqlconf_conf_pool = make_sub_pool(conf_sql_pool);
+    pr_pool_tag(sqlconf_conf_pool, "SQL Configuration Pool");
+
+    p = sqlconf_conf_pool;
     uri = pstrdup(p, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
@@ -921,6 +938,10 @@ static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
   if (conf_sql_pool) {
     destroy_pool(conf_sql_pool);
     conf_sql_pool = NULL;
+
+    sqlconf_conf_pool = NULL;
+    sqlconf_conf = NULL;
+    sqlconf_confi = 0;
   }
 }
 
