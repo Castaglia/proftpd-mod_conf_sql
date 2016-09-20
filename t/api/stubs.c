@@ -77,7 +77,7 @@ int pr_trace_msg(const char *trace_channel, int level, const char *fmt, ...) {
   if (getenv("TEST_VERBOSE") != NULL) {
     va_list msg;
 
-    fprintf(stderr, "%s:%d: ", trace_channel, level);
+    fprintf(stderr, "<%s:%d>: ", trace_channel, level);
 
     va_start(msg, fmt);
     vfprintf(stderr, fmt, msg);

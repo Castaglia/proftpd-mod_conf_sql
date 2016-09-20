@@ -6,7 +6,7 @@ use Carp;
 use Cwd qw(abs_path realpath);
 use File::Path qw(mkpath rmtree);
 use File::Spec;
-use Test::Simple tests => 3;
+use Test::Simple tests => 8;
 
 # Note: We COULD honor/use the TEST_VERBOSE environment variable here, but
 # this separate variable makes for a per-db verbose flag.
@@ -14,6 +14,11 @@ my $debug = 1;
 
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
+my $proftpd_opts = "-t";
+if ($debug) {
+  $proftpd_opts = "-td10";
+}
+
 my $config_file = "$ENV{TRAVIS_BUILD_DIR}/proftpd/sample-configurations/basic.conf";
 
 my $test_dir = (File::Spec->splitpath(abs_path(__FILE__)))[1];
@@ -37,7 +42,7 @@ $ex = $@ if $@;
 ok($res && !defined($ex), "built MySQL database");
 
 my $simple_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=mysql";
-$cmd = "$proftpd -td10 -c '$simple_url'";
+$cmd = "$proftpd $proftpd_opts -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
@@ -49,15 +54,14 @@ $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple MySQL URL again");
 
 my $complex_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=mysql&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
-$cmd = "$proftpd -td10 -c '$complex_url'";
+$cmd = "$proftpd $proftpd_opts -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex MySQL URL");
 
-=pod
-my $bad_url = "sql://$db_file?tracing=true&driver=mysql&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
-$cmd = "$proftpd -td10 -c '$bad_url'";
+my $bad_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=mysql&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
+$cmd = "$proftpd $proftpd_opts -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
@@ -73,13 +77,13 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "populated MySQL database");
 
-$cmd = "$proftpd -td10 -c '$simple_url'";
+$cmd = "$proftpd $proftpd_opts -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read valid config from simple MySQL URL");
 
-$cmd = "$proftpd -td10 -c '$complex_url'";
+$cmd = "$proftpd $proftpd_opts -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;

@@ -671,9 +671,6 @@ static int sqlconf_read_db(pool *p, char *driver, int use_tracing) {
     cmd = sqlconf_cmd_alloc(p, 0);
 
   } else {
-    pr_trace_msg(trace_channel, 9, "reading database using driver '%s'",
-      driver);
-
     /* The mod_sql_sqlite module uses a backend name of "sqlite3"; check
      * the driver name to see if that what was intended.
      */
