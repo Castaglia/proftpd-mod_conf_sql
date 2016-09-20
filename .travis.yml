@@ -12,6 +12,10 @@ install:
   - sudo apt-get update -qq
   # for unit tests
   - sudo apt-get install -y check
+  # for mod_sql_mysql
+  - sudo apt-get install -y libmysqlclient-dev
+  # for mod_sql_postgres
+  - sudo apt-get install -y libpq-dev
   # for mod_sql_sqlite
   - sudo apt-get install -y libsqlite3-dev sqlite3
   # for static code analysis
@@ -42,9 +46,9 @@ script:
   - cp -R t/ proftpd/contrib/mod_conf_sql/t/
   - cp *.sql proftpd/contrib/mod_conf_sql/t/
   - cd proftpd
-  - ./configure --enable-devel=coverage --enable-dso --enable-tests --with-shared=mod_sql:mod_sql_sqlite:mod_conf_sql
+  - ./configure --enable-devel=coverage --enable-dso --enable-tests --with-shared=mod_sql:mod_conf_sql
   - make
   - make clean
-  - ./configure --enable-devel=coverage --enable-tests --with-modules=mod_sql:mod_sql_sqlite:mod_conf_sql
+  - ./configure --enable-devel=coverage --enable-tests --with-modules=mod_sql:mod_sql_mysql:mod_sql_postgres:mod_sql_sqlite:mod_conf_sql
   - make
   - cd contrib/mod_conf_sql && make TEST_VERBOSE=1 check && cd ../../

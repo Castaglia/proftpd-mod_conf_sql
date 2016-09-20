@@ -36,7 +36,7 @@ eval { $res = run_cmd($cmd) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "built MySQL database");
 
-my $simple_url = "sql://$username:$password\@localhost/$dbname";
+my $simple_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=mysql";
 $cmd = "$proftpd -td10 -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
@@ -48,7 +48,7 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple MySQL URL again");
 
-my $complex_url = "sql://$username:$password\@localhost/$dbname?ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+my $complex_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=mysql&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 $cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
@@ -56,7 +56,7 @@ $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex MySQL URL");
 
 =pod
-my $bad_url = "sql://$db_file?ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
+my $bad_url = "sql://$db_file?tracing=true&driver=mysql&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
 $cmd = "$proftpd -td10 -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
