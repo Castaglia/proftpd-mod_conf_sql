@@ -164,6 +164,14 @@ shown in the example MySQL schema above.  Note that if column names are
 specified, <b>all</b> of the columns in the table <b>must</b> be provided.
 
 <p>
+The SQL URL also supports the following optional query parameters:
+<ul>
+  <li><code>database</code>
+  <li><code>driver</code>
+  <li><code>tracing</code>
+</ul>
+
+<p>
 The following example shows a &quot;path&quot; where the table names are
 specified, but the column names in those tables are left to the default
 values:
@@ -257,6 +265,77 @@ Example:
 Note that the script currently allows the SQL table names to be specified
 via command-line options, but the column names are assumed to be those
 mentioned above.
+
+<p>
+<b>Logging</b><br>
+The <code>mod_conf_sql</code> module supports
+<a href="http://www.proftpd.org/docs/howto/Tracing.html">trace logging</a>,
+via the module-specific log channels:
+<ul>
+  <li>conf_sql
+</ul>
+Thus for trace logging, to aid in debugging, you would use the <em>tracing</em>
+query parameter in your SQL URI:
+<pre>
+  sql://<i>user</i>:<i>passwd</i>@<i>host</i>?tracing=true
+</pre>
+This trace logging can generate large files; it is intended for debugging use
+only, and should be removed from any production configuration.
+
+<p><a name="FAQ">
+<b>Frequently Asked Questions</b><br>
+
+<p><a name="SQLConfSharedModules">
+<font color=red>Question</font>: How do I use <code>mod_conf_sql</code>, if
+all of my SQL modules were built as DSO/shared modules?<br>
+<font color=blue>Answer</font>: Use a <i>bootstrap</i> configuration file,
+which <i>first</i> dynamicly loads the necessary modules via
+<code>LoadModule</code>, and then uses the SQL URL as an <code>Include</code>
+file:
+<pre>
+  &lt;IfModule mod_dso.c&gt;
+    LoadModule mod_sql.c
+    LoadModule mod_sql_mysql.c
+    LoadModule mod_sql_postgres.c
+    LoadModule mod_sql_sqlite.c
+  &lt;/IfModule&gt;
+
+  Include sql://...
+</pre>
+
+<p><a name="SQLConfMissingModule">
+<font color=red>Question</font>: When I try to tell <code>proftpd</code> to
+use my SQL URL, it fails saying "missing required mod_sql".  Why?<br>
+<pre>
+  $ proftpd -nd10 -c 'sql:///home/tj/proftpd/proftpd.db?tracing=true&driver=sqlite'
+  ...
+  proftpd[33263]: mod_conf_sql/0.8: missing required mod_sql; module not built/loaded
+  proftpd[33263]: fatal: unable to read configuration file 'sql:///home/tj/proftpd/proftpd.db?tracing=true&driver=sqlite': No such file or directory
+</pre>
+<font color=blue>Answer</font>: This happens because either <i>a)</i> your
+ProFTPD was not built with the <code>mod_sql</code> module at all, or <i>b)</i>
+your ProFTPD has <code>mod_sql</code> built as a <em>shared</em> module.
+This other <a href="#SQLConfSharedModules>FAQ</a> covers the shared module
+case.
+
+<p><a name="SQLConfSQLite">
+<font color=red>Question</font>: I want to use a local SQLite database file as
+the configuration database for <code>mod_conf_sql</code>.  What should my
+SQL URL look like?<br>
+<font color=blue>Answer</font>: SQLite databases do not require usernames,
+passwords, or ports.  Thus the SQL URL should start with the "sql://" scheme
+prefix, followed by the full path to the SQLite database file:
+<pre>
+  sql:///path/to/sqlite.db
+</pre>
+<b>Important</b>: When using a SQL URL to a SQLite database, do <b>not</b>
+use the <em>database</em> query parameter, <i>e.g.</i>:
+<pre>
+  sql:///path/to/sqlite.db?database=proftpd
+</pre>
+The internal heuristics that <code>mod_conf_sql</code> uses when determining
+how <i>exactly</i> to connect to the database in question use the database
+name as a factor; for SQLite databases, that name is <b>not</b> needed.
 
 <p>
 <hr>
