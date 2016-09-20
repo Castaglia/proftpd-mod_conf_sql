@@ -160,53 +160,50 @@ close($conf);
 # Now, generate the SQL statements necessary to import the given configuration
 # file into a SQL database.
 
-my ($sql, $sth);
+my ($stmt, $sth);
 
 unless ($opts->{'add-conf'}) {
-  $sql = "DELETE FROM $opts->{'ctx-tab'}";
-  $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
-  dbi_free_sql($sth);
+  $stmt = "DELETE FROM $opts->{'ctx-tab'}";
+  $sth = dbi_prep_stmt($stmt);
+  dbi_exec_stmt($stmt, $sth);
+  dbi_free_stmt($sth);
 
-  $sql = "DELETE FROM $opts->{'conf-tab'}";
-  $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
-  dbi_free_sql($sth);
+  $stmt = "DELETE FROM $opts->{'conf-tab'}";
+  $sth = dbi_prep_stmt($stmt);
+  dbi_exec_stmt($stmt, $sth);
+  dbi_free_stmt($sth);
 
-  $sql = "DELETE FROM $opts->{'map-tab'}";
-  $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
-  dbi_free_sql($sth);
+  $stmt = "DELETE FROM $opts->{'map-tab'}";
+  $sth = dbi_prep_stmt($stmt);
+  dbi_exec_stmt($stmt, $sth);
+  dbi_free_stmt($sth);
 }
 
-$sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (NULL, '" . ($opts->{'ctx-prefix'} . '1') . "', 'default', NULL)";
-if ($opts->{verbose}) {
-  print STDOUT "# Executing: $sql\n";
-}
-$sth = dbi_prep_sql($sql);
-dbi_exec_sql($sql, $sth);
-dbi_free_sql($sth);
+$stmt = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (NULL, ?, ?, NULL)";
+$sth = dbi_prep_stmt($stmt);
+$sth->bind_param(1, $opts->{'ctx-prefix'} . '1');
+$sth->bind_param(2, 'default');
+dbi_exec_stmt($stmt, $sth);
+dbi_free_stmt($sth);
 
-$sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = 'default' AND value IS NULL";
-if ($opts->{verbose}) {
-  print STDOUT "# Executing: $sql\n";
-}
-$sth = dbi_prep_sql($sql);
-dbi_exec_sql($sql, $sth);
+$stmt = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = ? AND value IS NULL";
+$sth = dbi_prep_stmt($stmt);
+$sth->bind_param(1, 'default');
+dbi_exec_stmt($stmt, $sth);
 my $parent_id = ($sth->fetchrow_array())[0];
-dbi_free_sql($sth);
+dbi_free_stmt($sth);
 
 process_ctx($ctx, $parent_id);
 
 exit 0;
 
 # ---------------------------------------------------------------------------
-sub dbi_prep_sql {
-  my ($sql) = @_;
+sub dbi_prep_stmt {
+  my ($stmt) = @_;
   my $sth;
 
-  unless ($sth = $dbh->prepare($sql)) {
-    warn "$program: unable to prepare '$sql': $DBI::errstr\n"
+  unless ($sth = $dbh->prepare($stmt)) {
+    warn "$program: unable to prepare '$stmt': $DBI::errstr\n"
       if $opts->{verbose};
     return;
   }
@@ -215,14 +212,14 @@ sub dbi_prep_sql {
 }
 
 # ---------------------------------------------------------------------------
-sub dbi_exec_sql {
-  my ($sql, $sth) = @_;
+sub dbi_exec_stmt {
+  my ($stmt, $sth) = @_;
 
-  print "$program: executing: $sql\n" if $opts->{'show-sql'};
+  print "$program: executing: $stmt\n" if $opts->{'show-sql'};
 
   unless ($opts->{'dry-run'}) {
     unless ($sth->execute()) {
-      warn "$program: error executing '$sql': $DBI::errstr\n"
+      warn "$program: error executing '$stmt': $DBI::errstr\n"
         if $opts->{verbose};
       return;
     }
@@ -232,7 +229,7 @@ sub dbi_exec_sql {
 }
 
 # ---------------------------------------------------------------------------
-sub dbi_free_sql {
+sub dbi_free_stmt {
   my ($sth) = @_;
   $sth->finish();
 }
@@ -240,62 +237,60 @@ sub dbi_free_sql {
 # ---------------------------------------------------------------------------
 sub process_ctx {
   my ($ctx, $ctx_id) = @_;
-  my ($sql, $sth);
+  my ($stmt, $sth);
 
   # First, handle all of the configuration directives in this context
   foreach my $conf (@{ $ctx->{directives} }) {
-    my $name = $dbh->quote($conf->{name});
-    my $value = $dbh->quote($conf->{value});
+    # Note: quoting is automatically handled by the placeholders
+    my $name = $conf->{name};
+    my $value = $conf->{value};
 
-    $sql = "INSERT INTO $opts->{'conf-tab'} (name, value) VALUES ($name, $value)";
-    if ($opts->{verbose}) {
-      print STDOUT "# Executing: $sql\n";
-    }
-    $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
-    dbi_free_sql($sth);
+    $stmt = "INSERT INTO $opts->{'conf-tab'} (name, value) VALUES (?, ?)";
+    $sth = dbi_prep_stmt($stmt);
+    $sth->bind_param(1, $name);
+    $sth->bind_param(2, $value);
+    dbi_exec_stmt($stmt, $sth);
+    dbi_free_stmt($sth);
 
-    # XXX Consider using placeholders, for space-bearing values
-    $sql = "SELECT id FROM $opts->{'conf-tab'} WHERE name = $name AND value = $value";
-    if ($opts->{verbose}) {
-      print STDOUT "# Executing: $sql\n";
-    }
-    $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
+    $stmt = "SELECT id FROM $opts->{'conf-tab'} WHERE name = ? AND value = ?";
+    $sth = dbi_prep_stmt($stmt);
+    $sth->bind_param(1, $name);
+    $sth->bind_param(2, $value);
+    dbi_exec_stmt($stmt, $sth);
     my $conf_id = ($sth->fetchrow_array())[0];
-    dbi_free_sql($sth);
+    dbi_free_stmt($sth);
 
-    $sql = "INSERT INTO $opts->{'map-tab'} (ctx_id, conf_id) VALUES ($ctx_id, $conf_id)";
-    if ($opts->{verbose}) {
-      print STDOUT "# Executing: $sql\n";
-    }
-    $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
-    dbi_free_sql($sth);
+    $stmt = "INSERT INTO $opts->{'map-tab'} (ctx_id, conf_id) VALUES (?, ?)";
+    $sth = dbi_prep_stmt($stmt);
+    $sth->bind_param(1, $ctx_id);
+    $sth->bind_param(2, $conf_id);
+    dbi_exec_stmt($stmt, $sth);
+    dbi_free_stmt($sth);
   }
 
   # Next, handle any contained contexts in this context
   foreach my $sub_ctx (@{ $ctx->{contexts} }) {
-    my $name = $dbh->quote($sub_ctx->{name});
-    my $type = $dbh->quote($sub_ctx->{type});
-    my $value = $dbh->quote($sub_ctx->{value});
+    my $name = $sub_ctx->{name};
+    my $type = $sub_ctx->{type};
+    my $value = $sub_ctx->{value};
 
-    $sql = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES ($ctx_id, $name, $type, $value)";
-    if ($opts->{verbose}) {
-      print STDOUT "# Executing: $sql\n";
-    }
-    $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
-    dbi_free_sql($sth);
+    $stmt = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (?, ?, ?, ?)";
+    $sth = dbi_prep_stmt($stmt);
+    $sth->bind_param(1, $ctx_id);
+    $sth->bind_param(2, $name);
+    $sth->bind_param(3, $type);
+    $sth->bind_param(4, $value);
+    dbi_exec_stmt($stmt, $sth);
+    dbi_free_stmt($sth);
 
-    $sql = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = $type AND value = $value AND parent_id = $ctx_id";
-    if ($opts->{verbose}) {
-      print STDOUT "# Executing: $sql\n";
-    }
-    $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
+    $stmt = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = ? AND value = ? AND parent_id = ?";
+    $sth = dbi_prep_stmt($stmt);
+    $sth->bind_param(1, $type);
+    $sth->bind_param(2, $value);
+    $sth->bind_param(3, $ctx_id);
+    dbi_exec_stmt($stmt, $sth);
     my $sub_ctx_id = ($sth->fetchrow_array())[0];
-    dbi_free_sql($sth);
+    dbi_free_stmt($sth);
 
     process_ctx($sub_ctx, $sub_ctx_id);
   }
