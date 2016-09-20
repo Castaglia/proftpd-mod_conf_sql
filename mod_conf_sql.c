@@ -268,7 +268,9 @@ static int sqlconf_parse_uri(pool *p, const char *uri, char **driver,
   /* Advance one character past the path separator to get the database/schema
    * name.
    */
-  sqlconf_db.database = pstrdup(p, path + 1);
+  if (path != NULL) {
+    sqlconf_db.database = pstrdup(p, path + 1);
+  }
 
   v = pr_table_get(params, "database", NULL);
   if (v != NULL) {

@@ -25,6 +25,8 @@
 #include "mod_conf_sql.h"
 #include "uri.h"
 
+static const char *trace_channel = "conf_sql";
+
 static char *uri_parse_host(pool *p, const char *orig_uri, const char *uri,
     char **remaining) {
   char *host = NULL, *ptr = NULL;
@@ -281,6 +283,9 @@ static int uri_store_kv(pool *p, const char *uri, pr_table_t *params,
     return -1;
   }
 
+  pr_trace_msg(trace_channel, 9,
+    "parsed parameter '%.*s', value '%.*s' from URI", (int) klen, k,
+    (int) vlen, v);
   return 0;
 }
 
