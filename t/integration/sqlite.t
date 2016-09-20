@@ -6,7 +6,7 @@ use Carp;
 use Cwd qw(abs_path realpath);
 use File::Path qw(mkpath rmtree);
 use File::Spec;
-use Test::Simple tests => 7;
+use Test::Simple tests => 8;
 
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
@@ -30,21 +30,26 @@ $ex = $@ if $@;
 ok($res && !defined($ex), "built SQLite database");
 
 my $simple_url = "sql://$db_file";
-$cmd = "$proftpd -t -c '$simple_url' 2>&1";
+$cmd = "$proftpd -td10 -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple SQLite URL");
 
+$ex = undef;
+eval { $res = run_cmd($cmd, 1) };
+$ex = $@ if $@;
+ok($res && !defined($ex), "read empty config from simple SQLite URL again");
+
 my $complex_url = "sql://$db_file?database=proftpd&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
-$cmd = "$proftpd -t -c '$complex_url' 2>&1";
+$cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex SQLite URL");
 
 my $bad_url = "sql://$db_file?database=proftpd&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
-$cmd = "$proftpd -t -c '$bad_url' 2>&1";
+$cmd = "$proftpd -td10 -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
@@ -60,13 +65,13 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "populated SQLite database");
 
-$cmd = "$proftpd -t -c '$simple_url' 2>&1";
+$cmd = "$proftpd -td10 -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read valid config from simple SQLite URL");
 
-$cmd = "$proftpd -t -c '$complex_url' 2>&1";
+$cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
