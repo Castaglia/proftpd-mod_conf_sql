@@ -648,13 +648,6 @@ static int sqlconf_read_db(pool *p, const char *driver) {
     cmd = sqlconf_cmd_alloc(p, 0);
 
   } else {
-    /* mod_sql_sqlite uses a backend name of "sqlite3"; check for this
-     * as the intended driver to use.
-     */
-    if (strcasecmp(driver, "sqlite") == 0) {
-      driver = pstrdup(p, "sqlite3");
-    }
-
     cmd = sqlconf_cmd_alloc(p, 1, driver);
   }
 
