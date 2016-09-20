@@ -391,7 +391,7 @@ static cmd_rec *sqlconf_cmd_alloc(pool *p, unsigned int argc, ...) {
   cmd->stash_index = -1;
   cmd->pool = sub_pool;
 
-  cmd->argv = pcalloc(sub_pool, sizeof(void *) * (argc));
+  cmd->argv = pcalloc(sub_pool, sizeof(void *) * (argc + 1));
   cmd->tmp_pool = sub_pool;
 
   va_start(args, argc);
@@ -648,6 +648,13 @@ static int sqlconf_read_db(pool *p, const char *driver) {
     cmd = sqlconf_cmd_alloc(p, 0);
 
   } else {
+    /* The mod_sql_sqlite module uses a backend name of "sqlite3"; check
+     * the driver name to see if that what was intended.
+     */
+    if (strcasecmp(driver, "sqlite") == 0) {
+      driver = pstrdup(p, "sqlite3");
+    }
+
     cmd = sqlconf_cmd_alloc(p, 1, driver);
   }
 
