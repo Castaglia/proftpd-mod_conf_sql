@@ -10,7 +10,7 @@ use Test::Simple tests => 8;
 
 # Note: We COULD honor/use the TEST_VERBOSE environment variable here, but
 # this separate variable makes for a per-db verbose flag.
-my $debug = 1;
+my $debug = 0;
 
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
