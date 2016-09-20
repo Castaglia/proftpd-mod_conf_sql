@@ -241,8 +241,9 @@ sub process_ctx {
 
   # First, handle all of the configuration directives in this context
   foreach my $conf (@{ $ctx->{directives} }) {
-    my $name = $dbh->quote($conf->{name});
-    my $value = $dbh->quote($conf->{value});
+    # Note: quoting is automatically handled by the placeholders
+    my $name = $conf->{name};
+    my $value = $conf->{value};
 
     $stmt = "INSERT INTO $opts->{'conf-tab'} (name, value) VALUES (?, ?)";
     $sth = dbi_prep_stmt($stmt);
@@ -269,9 +270,9 @@ sub process_ctx {
 
   # Next, handle any contained contexts in this context
   foreach my $sub_ctx (@{ $ctx->{contexts} }) {
-    my $name = $dbh->quote($sub_ctx->{name});
-    my $type = $dbh->quote($sub_ctx->{type});
-    my $value = $dbh->quote($sub_ctx->{value});
+    my $name = $sub_ctx->{name};
+    my $type = $sub_ctx->{type};
+    my $value = $sub_ctx->{value};
 
     $stmt = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (?, ?, ?, ?)";
     $sth = dbi_prep_stmt($stmt);
