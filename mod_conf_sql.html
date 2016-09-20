@@ -68,27 +68,27 @@ that the underlying database <b>must</b> support <code>INNER JOIN</code>s.
 Here is an example MySQL schema for the tables <code>mod_conf_sql</code>
 uses:
 <pre>
-  CREATE TABLE ftpctx IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpctx (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
     parent_id INTEGER UNSIGNED,
     type VARCHAR(255),
     value VARCHAR(255)
   );
 
-  CREATE TABLE ftpconf IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpconf (
     id INTEGER UNSIGNED UNIQUE PRIMARY KEY NOT NULL AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     value BLOB
   );
 
-  CREATE TABLE ftpmap IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpmap (
     conf_id INTEGER UNSIGNED NOT NULL,
     ctx_id INTEGER UNSIGNED NOT NULL
   );
 </pre>
 Example PostgresQL schema:
 <pre>
-  CREATE TABLE ftpctx IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpctx (
     id SERIAL,
     parent_id INTEGER,
     type TEXT,
@@ -96,14 +96,14 @@ Example PostgresQL schema:
     PRIMARY KEY (id)
   );
 
-  CREATE TABLE ftpconf IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpconf (
     id SERIAL,
     name TEXT NOT NULL,
     value TEXT,
     PRIMARY KEY (id)
   );
 
-  CREATE TABLE ftpmap IF NOT EXISTS (
+  CREATE TABLE IF NOT EXISTS ftpmap (
     conf_id INTEGER NOT NULL,
     ctx_id INTEGER NOT NULL
   );
