@@ -133,7 +133,7 @@ int sqlconf_param_parse_conf(pool *p, pr_table_t *params, char **table,
       *value_col = pstrndup(p, cols_val, sz);
     }
 
-    ptr = memchr((char *) v + (char *) cols_valsz, ':', vsz - cols_valsz);
+    ptr = memchr((char *) v + cols_valsz, ':', vsz - cols_valsz);
   }
 
   if (ptr != NULL) {
@@ -278,7 +278,7 @@ int sqlconf_param_parse_ctx(pool *p, pr_table_t *params, char **table,
       *value_col = pstrndup(p, cols_val, sz);
     }
 
-    ptr = memchr((char *) v + (char *) cols_valsz, ':', vsz - cols_valsz);
+    ptr = memchr((char *) v + cols_valsz, ':', vsz - cols_valsz);
   }
 
   if (ptr != NULL) {
@@ -392,7 +392,7 @@ int sqlconf_param_parse_map(pool *p, pr_table_t *params, char **table,
       *ctx_id_col = pstrndup(p, cols_val, sz);
     }
 
-    ptr = memchr((char *) v + (char *) cols_valsz, ':', vsz - cols_valsz);
+    ptr = memchr((char *) v + cols_valsz, ':', vsz - cols_valsz);
   }
 
   if (ptr != NULL) {
