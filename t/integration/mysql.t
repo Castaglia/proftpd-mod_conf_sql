@@ -71,7 +71,7 @@ my $verbose = '';
 if ($debug) {
   $verbose = '--verbose';
 }
-$cmd = "$conf2sql $verbose --dbdriver=mysql --dbname=$db_file $config_file";
+$cmd = "$conf2sql $verbose --dbdriver=mysql --dbserver=localhost --dbuser=$username --dbpass=$password --dbname=$dbname $config_file";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
@@ -90,8 +90,6 @@ $ex = $@ if $@;
 ok($res && !defined($ex), "read valid config from complex MySQL URL");
 
 # XXX Last, empty/restore the db file, and populate it with BAD config
-
-=cut
 
 sub run_cmd {
   my $cmd = shift;
