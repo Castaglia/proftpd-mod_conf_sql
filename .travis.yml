@@ -30,6 +30,8 @@ install:
 before_script:
   # Create the expected database in MySQL
   - mysql -e 'CREATE DATABASE proftpd;' -u root
+  # Create the expected database in Postgres
+  - psql -c 'CREATE DATABASE proftpd;' -U postgres
   - cd ${TRAVIS_BUILD_DIR}
   - lcov --directory . --zerocounters
 

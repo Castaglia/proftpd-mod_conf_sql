@@ -1,6 +1,3 @@
-CREATE DATABASE proftpd;
-USE proftpd;
-
 CREATE TABLE IF NOT EXISTS ftpctx (
   id SERIAL,
   parent_id INTEGER,
