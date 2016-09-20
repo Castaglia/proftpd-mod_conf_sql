@@ -57,8 +57,14 @@ if ($opts->{dbdriver} =~ /sqlite/i) {
   $dsn = "DBI:$opts->{dbdriver}:$dbkey=$opts->{dbname};host=$opts->{dbserver}";
 }
 
+my $dbi_opts = {
+  RaiseError => 1,
+  AutoCommit => 1,
+};
+
 my $dbh;
-unless ($dbh = DBI->connect($dsn, $opts->{dbuser}, $opts->{dbpass})) {
+unless ($dbh = DBI->connect($dsn, $opts->{dbuser}, $opts->{dbpass},
+    $dbi_opts)) {
   die "$program: unable to connect to $dbname: $DBI::errstr\n";
 }
 
@@ -165,17 +171,17 @@ my ($stmt, $sth);
 unless ($opts->{'add-conf'}) {
   $stmt = "DELETE FROM $opts->{'ctx-tab'}";
   $sth = dbi_prep_stmt($stmt);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
   dbi_free_stmt($sth);
 
   $stmt = "DELETE FROM $opts->{'conf-tab'}";
   $sth = dbi_prep_stmt($stmt);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
   dbi_free_stmt($sth);
 
   $stmt = "DELETE FROM $opts->{'map-tab'}";
   $sth = dbi_prep_stmt($stmt);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
   dbi_free_stmt($sth);
 }
 
@@ -183,13 +189,13 @@ $stmt = "INSERT INTO $opts->{'ctx-tab'} (parent_id, name, type, value) VALUES (N
 $sth = dbi_prep_stmt($stmt);
 $sth->bind_param(1, $opts->{'ctx-prefix'} . '1');
 $sth->bind_param(2, 'default');
-dbi_exec_stmt($stmt, $sth);
+dbi_exec_stmt($sth);
 dbi_free_stmt($sth);
 
 $stmt = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = ? AND value IS NULL";
 $sth = dbi_prep_stmt($stmt);
 $sth->bind_param(1, 'default');
-dbi_exec_stmt($stmt, $sth);
+dbi_exec_stmt($sth);
 my $parent_id = ($sth->fetchrow_array())[0];
 dbi_free_stmt($sth);
 
@@ -213,13 +219,21 @@ sub dbi_prep_stmt {
 
 # ---------------------------------------------------------------------------
 sub dbi_exec_stmt {
-  my ($stmt, $sth) = @_;
+  my ($sth) = @_;
 
-  print "$program: executing: $stmt\n" if $opts->{'show-sql'};
+  if ($opts->{'show-sql'}) {
+    my $params = $sth->{ParamValues};
+    if ($params) {
+      print "$program: executing: $sth->{Statement} using parameters $params\n";
+
+    } else {
+      print "$program: executing: $sth->{Statement}\n";
+    }
+  }
 
   unless ($opts->{'dry-run'}) {
     unless ($sth->execute()) {
-      warn "$program: error executing '$stmt': $DBI::errstr\n"
+      warn "$program: error executing '$sth->{Statement}': $DBI::errstr\n"
         if $opts->{verbose};
       return;
     }
@@ -249,14 +263,14 @@ sub process_ctx {
     $sth = dbi_prep_stmt($stmt);
     $sth->bind_param(1, $name);
     $sth->bind_param(2, $value);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     dbi_free_stmt($sth);
 
     $stmt = "SELECT id FROM $opts->{'conf-tab'} WHERE name = ? AND value = ?";
     $sth = dbi_prep_stmt($stmt);
     $sth->bind_param(1, $name);
     $sth->bind_param(2, $value);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     my $conf_id = ($sth->fetchrow_array())[0];
     dbi_free_stmt($sth);
 
@@ -264,7 +278,7 @@ sub process_ctx {
     $sth = dbi_prep_stmt($stmt);
     $sth->bind_param(1, $ctx_id);
     $sth->bind_param(2, $conf_id);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     dbi_free_stmt($sth);
   }
 
@@ -280,7 +294,7 @@ sub process_ctx {
     $sth->bind_param(2, $name);
     $sth->bind_param(3, $type);
     $sth->bind_param(4, $value);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     dbi_free_stmt($sth);
 
     $stmt = "SELECT id FROM $opts->{'ctx-tab'} WHERE type = ? AND value = ? AND parent_id = ?";
@@ -288,7 +302,7 @@ sub process_ctx {
     $sth->bind_param(1, $type);
     $sth->bind_param(2, $value);
     $sth->bind_param(3, $ctx_id);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     my $sub_ctx_id = ($sth->fetchrow_array())[0];
     dbi_free_stmt($sth);
 

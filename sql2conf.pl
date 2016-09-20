@@ -54,8 +54,14 @@ if ($opts->{dbdriver} =~ /sqlite/i) {
   $dsn = "DBI:$opts->{dbdriver}:$dbkey=$opts->{dbname};host=$opts->{dbserver}";
 }
 
+my $dbi_opts = {
+  RaiseError => 1,
+  AutoCommit => 1,
+};
+
 my $dbh;
-unless ($dbh = DBI->connect($dsn, $opts->{dbuser}, $opts->{dbpass})) {
+unless ($dbh = DBI->connect($dsn, $opts->{dbuser}, $opts->{dbpass},
+    $dbi_opts)) {
   die "$program: unable to connect to $dbname: $DBI::errstr\n";
 }
 
@@ -83,12 +89,14 @@ sub dbi_prep_stmt {
 }
 
 sub dbi_exec_stmt {
-  my ($stmt, $sth) = @_;
+  my ($sth) = @_;
 
-  print "$program: executing: $stmt\n" if $opts->{'show-sql'};
+  if ($opts->{'show-sql'}) {
+    print "$program: executing: $sth->{Statement}\n";
+  }
 
   unless ($sth->execute()) {
-    warn "$program: error executing '$stmt', $DBI::errstr\n";
+    warn "$program: error executing '$sth->{Statement}', $DBI::errstr\n";
     return;
   }
 
@@ -112,7 +120,7 @@ sub get_ctx {
   unless ($id) {
     my $stmt = "SELECT id FROM $ctx_tab WHERE parent_id IS NULL";
     my $sth = dbi_prep_stmt($stmt);
-    dbi_exec_stmt($stmt, $sth);
+    dbi_exec_stmt($sth);
     $id = ($sth->fetchrow_array())[0];
     dbi_free_stmt($sth);
   }
@@ -120,7 +128,7 @@ sub get_ctx {
   my $stmt = "SELECT type, value FROM $ctx_tab WHERE id = ?";
   my $sth = dbi_prep_stmt($stmt);
   $sth->bind_param(1, $id);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
 
   $ctx->{id} = $id;
   ($ctx->{type}, $ctx->{value}) = ($sth->fetchrow_array())[0, 1];
@@ -145,7 +153,7 @@ sub get_ctx_ctxs {
   my $stmt = "SELECT id FROM $ctx_tab WHERE parent_id = ?";
   my $sth = dbi_prep_stmt($stmt);
   $sth->bind_param(1, $ctx_id);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
 
   my $ctxs;
   while (my @row = $sth->fetchrow_array()) {
@@ -168,7 +176,7 @@ sub get_ctx_directives {
              " WHERE $map_tab.ctx_id = ?";
   my $sth = dbi_prep_stmt($stmt);
   $sth->bind_param(1, $ctx_id);
-  dbi_exec_stmt($stmt, $sth);
+  dbi_exec_stmt($sth);
 
   my $directives;
   while (my @row = $sth->fetchrow_array()) {
