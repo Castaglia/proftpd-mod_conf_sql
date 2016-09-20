@@ -97,7 +97,7 @@ static const char *trace_channel = "conf_sql";
 
 /* Prototypes */
 static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase);
-static void sqlconf_register(void);
+static void sqlconf_register(pool *p);
 
 static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
   int res;
@@ -416,8 +416,7 @@ static modret_t *sqlconf_dispatch(cmd_rec *cmd, char *name) {
 
   cmdtab = pr_stash_get_symbol(PR_SYM_HOOK, name, NULL, NULL);
   if (cmdtab == NULL) {
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": unable to find SQL hook symbol '%s'", name);
+    pr_trace_msg(trace_channel, 2, "unable to find SQL hook symbol '%s'", name);
     errno = ENOENT;
     return PR_ERROR(cmd);
   }
@@ -528,7 +527,7 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   for (i = 0; i < sd->rnum; i++) {
     char *str;
 
-    str = pstrcat(conf_sql_pool, sd->data[(i * sd->fnum)], " ",
+    str = pstrcat(sqlconf_conf_pool, sd->data[(i * sd->fnum)], " ",
       sd->data[(i * sd->fnum) + 1], "\n", NULL);
     *((char **) push_array(sqlconf_conf)) = str;
   }
@@ -591,7 +590,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   if (ctx_key != NULL &&
       !isbase) {
-    *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "<",
+    *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_conf_pool, "<",
       ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
   }
 
@@ -605,7 +604,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   if (ctx_key != NULL &&
       !isbase) {
-    *((char **) push_array(sqlconf_conf)) = pstrcat(conf_sql_pool, "</",
+    *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_conf_pool, "</",
       ctx_key, ">\n", NULL);
   }
 
@@ -664,6 +663,13 @@ static int sqlconf_read_db(pool *p, char *driver) {
   const char *username, *password, *dsn;
   char *where, *which_id = NULL;
 
+  if (pr_module_exists("mod_sql.c") == FALSE) {
+    pr_log_pri(PR_LOG_NOTICE, MOD_CONF_SQL_VERSION
+      ": missing required mod_sql; module not built/loaded");
+    errno = ENOENT;
+    return -1;
+  }
+
   /* Load the SQL backend module we'll be using. */
   if (driver == NULL) {
     cmd = sqlconf_cmd_alloc(p, 0);
@@ -681,16 +687,34 @@ static int sqlconf_read_db(pool *p, char *driver) {
 
   res = sqlconf_dispatch(cmd, "sql_load_backend");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    int xerrno = errno;
+    const char *errmsg;
 
-/* XXX What if mod_sql is not built/loaded? */
-/* XXX What if desired backend is not built/loaded? */
+    errmsg = MODRET_ERRMSG(res);
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error loading database backend: %s",
+      errmsg ? errmsg : strerror(xerrno));
+
+    errno = xerrno;
+    return -1;
+  }
 
   /* Prepare the SQL subsystem. */
   cmd = sqlconf_cmd_alloc(p, 1, make_sub_pool(p));
   res = sqlconf_dispatch(cmd, "sql_prepare");
   destroy_pool(cmd->pool);
+  if (MODRET_ISERROR(res)) {
+    const char *errmsg;
 
-/* XXX What if this preparation fails? */
+    errmsg = MODRET_ERRMSG(res);
+    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+      ": error preparing database backend: %s",
+      errmsg ? errmsg : strerror(errno));
+
+    errno = EINVAL;
+    return -1;
+  }
 
   /* Define the connection we'll be making. */
   username = sqlconf_db.username;
@@ -811,11 +835,17 @@ static int sqlconf_read_db(pool *p, char *driver) {
 /* FSIO callbacks
  */
 
+static void sqlconf_set_stat(struct stat *st) {
+  /* Set the mode, for file type checking. */
+  st->st_mode = S_IFREG;
+
+  /* Set a default "block size". */
+  st->st_blksize = 4096;
+}
+
 static int sqlconf_fsio_fstat(pr_fh_t *fh, int fd, struct stat *st) {
   if (fd == CONF_SQL_FILENO) {
-    /* Set a default "block size". */
-    st->st_blksize = 4096;
-
+    sqlconf_set_stat(st);
     return 0;
   }
 
@@ -824,7 +854,9 @@ static int sqlconf_fsio_fstat(pr_fh_t *fh, int fd, struct stat *st) {
 
 static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
   /* Is this a path that we can use? */
+pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": fsio_lstat: path = '%s', prefix = '%s', prefix_len = 6", path, CONF_SQL_URI_PREFIX);
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
+    sqlconf_set_stat(st);
     return 0;
   }
 
@@ -834,6 +866,7 @@ static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
 static int sqlconf_fsio_stat(pr_fs_t *fs, const char *path, struct stat *st) {
   /* Is this a path that we can use? */
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
+    sqlconf_set_stat(st);
     return 0;
   }
 
@@ -934,11 +967,8 @@ static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
     use_tracing = FALSE;
   }
 
-  /* Destroy the module pool. */
-  if (conf_sql_pool) {
-    destroy_pool(conf_sql_pool);
-    conf_sql_pool = NULL;
-
+  if (sqlconf_conf_pool) {
+    destroy_pool(sqlconf_conf_pool);
     sqlconf_conf_pool = NULL;
     sqlconf_conf = NULL;
     sqlconf_confi = 0;
@@ -946,23 +976,20 @@ static void sqlconf_postparse_ev(const void *event_data, void *user_data) {
 }
 
 static void sqlconf_restart_ev(const void *event_data, void *user_data) {
-
   /* Register the FS object. */
-  sqlconf_register();
+  sqlconf_register(conf_sql_pool);
 }
 
 /* Initialization functions
  */
 
-static void sqlconf_register(void) {
+static void sqlconf_register(pool *p) {
   pr_fs_t *fs = NULL;
-
-  conf_sql_pool = make_sub_pool(permanent_pool);
 
   /* Register a FS object, with which we will watch for 'sql://' files
    * being opened, and intercept them.
    */
-  fs = pr_register_fs(conf_sql_pool, "sqlconf", "sql://");
+  fs = pr_register_fs(p, "sqlconf", "sql://");
   if (fs == NULL) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": error registering fs: %s",
       strerror(errno));
@@ -979,12 +1006,19 @@ static void sqlconf_register(void) {
   fs->close = sqlconf_fsio_close;
   fs->read = sqlconf_fsio_read;
   fs->stat = sqlconf_fsio_stat;
+
+#if PROFTPD_VERSION_NUMBER >= 0x0001030603
+  /* Tell the FSIO API that these are non-standard paths. */
+  fs->non_std_path = TRUE;
+#endif /* 1.3.6rc3 and later */
 }
 
 static int sqlconf_init(void) {
+  conf_sql_pool = make_sub_pool(permanent_pool);
+  pr_pool_tag(conf_sql_pool, "SQLConf Module Pool");
 
   /* Register the FS object. */
-  sqlconf_register();
+  sqlconf_register(conf_sql_pool);
 
   /* Register event handlers. */
   pr_event_register(&conf_sql_module, "core.postparse", sqlconf_postparse_ev,
