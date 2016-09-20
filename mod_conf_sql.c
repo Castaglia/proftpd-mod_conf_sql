@@ -359,7 +359,7 @@ static int sqlconf_parse_uri(pool *p, const char *uri, char **driver) {
   /* Look for a specific database backend/driver to use. */
   v = pr_table_get(params, "driver", NULL);
   if (v != NULL) {
-    *driver = (char *) v;
+    *driver = pstrdup(p, (char *) v);
   }
 
   pr_trace_msg(trace_channel, 6, "ctxs.base_id = %s",
