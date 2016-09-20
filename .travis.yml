@@ -5,6 +5,9 @@ compiler:
   - gcc
   - clang
 
+services:
+  - mysql
+
 install:
   - sudo apt-get update -qq
   # for unit tests

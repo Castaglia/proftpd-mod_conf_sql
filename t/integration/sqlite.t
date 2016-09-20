@@ -8,6 +8,10 @@ use File::Path qw(mkpath rmtree);
 use File::Spec;
 use Test::Simple tests => 8;
 
+# Note: We COULD honor/use the TEST_VERBOSE environment variable here, but
+# this separate variable makes for a per-db verbose flag.
+my $debug = 0;
+
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
 my $config_file = "$ENV{TRAVIS_BUILD_DIR}/proftpd/sample-configurations/basic.conf";
@@ -56,7 +60,7 @@ $ex = $@ if $@;
 ok(defined($ex), "handled invalid SQLite URL");
 
 my $verbose = '';
-if ($ENV{TEST_VERBOSE}) {
+if ($debug) {
   $verbose = '--verbose';
 }
 $cmd = "$conf2sql $verbose --dbdriver=sqlite --dbname=$db_file $config_file";
@@ -84,14 +88,14 @@ sub run_cmd {
   my $check_exit_status = shift;
   $check_exit_status = 0 unless defined $check_exit_status;
 
-  if ($ENV{TEST_VERBOSE}) {
+  if ($debug) {
     print STDOUT "# Executing: $cmd\n";
   }
 
   my @output = `$cmd > /dev/null`;
   my $exit_status = $?;
 
-  if ($ENV{TEST_VERBOSE}) {
+  if ($debug) {
     print STDOUT "# Output: ", join('', @output), "\n";
   }
 

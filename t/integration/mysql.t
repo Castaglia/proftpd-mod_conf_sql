@@ -6,7 +6,11 @@ use Carp;
 use Cwd qw(abs_path realpath);
 use File::Path qw(mkpath rmtree);
 use File::Spec;
-use Test::Simple tests => 1;
+use Test::Simple tests => 3;
+
+# Note: We COULD honor/use the TEST_VERBOSE environment variable here, but
+# this separate variable makes for a per-db verbose flag.
+my $debug = 1;
 
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
@@ -22,17 +26,17 @@ $db_script = realpath($db_script);
 my $conf2sql = File::Spec->catfile($test_dir, '..', '..', 'conf2sql.pl');
 $conf2sql = realpath($conf2sql);
 
-ok(1, "no MySQL tests yet");
+my $username = "root";
+my $password = "";
+my $dbname = "proftpd";
 
-=pod
 my ($ex, $res);
-my $db_file = "$tmpdir/proftpd.db";
-my $cmd = "sqlite3 $db_file < $db_script";
+my $cmd = "mysql --user=$username --password=$password $dbname < $db_script";
 eval { $res = run_cmd($cmd) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "built MySQL database");
 
-my $simple_url = "sql://$db_file";
+my $simple_url = "sql://$username:$password\@localhost/$dbname";
 $cmd = "$proftpd -td10 -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
@@ -44,13 +48,14 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple MySQL URL again");
 
-my $complex_url = "sql://$db_file?ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+my $complex_url = "sql://$username:$password\@localhost/$dbname?ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 $cmd = "$proftpd -td10 -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex MySQL URL");
 
+=pod
 my $bad_url = "sql://$db_file?ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
 $cmd = "$proftpd -td10 -c '$bad_url'";
 $ex = undef;
@@ -59,7 +64,7 @@ $ex = $@ if $@;
 ok(defined($ex), "handled invalid MySQL URL");
 
 my $verbose = '';
-if ($ENV{TEST_VERBOSE}) {
+if ($debug) {
   $verbose = '--verbose';
 }
 $cmd = "$conf2sql $verbose --dbdriver=mysql --dbname=$db_file $config_file";
@@ -89,14 +94,14 @@ sub run_cmd {
   my $check_exit_status = shift;
   $check_exit_status = 0 unless defined $check_exit_status;
 
-  if ($ENV{TEST_VERBOSE}) {
+  if ($debug) {
     print STDOUT "# Executing: $cmd\n";
   }
 
   my @output = `$cmd > /dev/null`;
   my $exit_status = $?;
 
-  if ($ENV{TEST_VERBOSE}) {
+  if ($debug) {
     print STDOUT "# Output: ", join('', @output), "\n";
   }
 
