@@ -70,32 +70,32 @@ show_conf($conf);
 exit 0;
 
 # ---------------------------------------------------------------------------
-sub dbi_prep_sql {
-  my ($sql) = @_;
+sub dbi_prep_stmt {
+  my ($stmt) = @_;
   my $sth;
 
-  unless ($sth = $dbh->prepare($sql)) {
-    warn "$program: unable to prepare '$sql': $DBI::errstr\n";
+  unless ($sth = $dbh->prepare($stmt)) {
+    warn "$program: unable to prepare '$stmt': $DBI::errstr\n";
     return;
   }
 
   return $sth;
 }
 
-sub dbi_exec_sql {
-  my ($sql, $sth) = @_;
+sub dbi_exec_stmt {
+  my ($stmt, $sth) = @_;
 
-  print "$program: executing: $sql\n" if $opts->{'show-sql'};
+  print "$program: executing: $stmt\n" if $opts->{'show-sql'};
 
   unless ($sth->execute()) {
-    warn "$program: error executing '$sql', $DBI::errstr\n";
+    warn "$program: error executing '$stmt', $DBI::errstr\n";
     return;
   }
 
   return 1;
 }
 
-sub dbi_free_sql {
+sub dbi_free_stmt {
   my ($sth) = @_;
   $sth->finish();
 }
@@ -110,20 +110,21 @@ sub get_ctx {
   my $ctx_tab = $opts->{'ctx-tab'};
 
   unless ($id) {
-    my $sql = "SELECT id FROM $ctx_tab WHERE parent_id IS NULL";
-    my $sth = dbi_prep_sql($sql);
-    dbi_exec_sql($sql, $sth);
+    my $stmt = "SELECT id FROM $ctx_tab WHERE parent_id IS NULL";
+    my $sth = dbi_prep_stmt($stmt);
+    dbi_exec_stmt($stmt, $sth);
     $id = ($sth->fetchrow_array())[0];
-    dbi_free_sql($sth);
+    dbi_free_stmt($sth);
   }
 
-  my $sql = "SELECT type, value FROM $ctx_tab WHERE id = $id";
-  my $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
+  my $stmt = "SELECT type, value FROM $ctx_tab WHERE id = ?";
+  my $sth = dbi_prep_stmt($stmt);
+  $sth->bind_param(1, $id);
+  dbi_exec_stmt($stmt, $sth);
 
   $ctx->{id} = $id;
   ($ctx->{type}, $ctx->{value}) = ($sth->fetchrow_array())[0, 1];
-  dbi_free_sql($sth);
+  dbi_free_stmt($sth);
 
   $ctx->{directives} = get_ctx_directives($id);
 
@@ -140,10 +141,11 @@ sub get_ctx_ctxs {
   my ($ctx_id) = @_;
 
   my $ctx_tab = $opts->{'ctx-tab'};
-  my $sql = "SELECT id FROM $ctx_tab WHERE parent_id = $ctx_id";
 
-  my $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
+  my $stmt = "SELECT id FROM $ctx_tab WHERE parent_id = ?";
+  my $sth = dbi_prep_stmt($stmt);
+  $sth->bind_param(1, $ctx_id);
+  dbi_exec_stmt($stmt, $sth);
 
   my $ctxs;
   while (my @row = $sth->fetchrow_array()) {
@@ -151,7 +153,7 @@ sub get_ctx_ctxs {
     push(@$ctxs, $id);
   }
 
-  dbi_free_sql($sth);
+  dbi_free_stmt($sth);
   return $ctxs;
 }
 
@@ -161,12 +163,12 @@ sub get_ctx_directives {
   my $dir_tab = $opts->{'conf-tab'};
   my $map_tab = $opts->{'map-tab'};
 
-  my $sql = "SELECT id, name, value FROM $dir_tab INNER JOIN $map_tab " .
-            " ON $dir_tab.id = $map_tab.conf_id" .
-            " WHERE $map_tab.ctx_id = $ctx_id";
-
-  my $sth = dbi_prep_sql($sql);
-  dbi_exec_sql($sql, $sth);
+  my $stmt = "SELECT id, name, value FROM $dir_tab INNER JOIN $map_tab " .
+             " ON $dir_tab.id = $map_tab.conf_id" .
+             " WHERE $map_tab.ctx_id = ?";
+  my $sth = dbi_prep_stmt($stmt);
+  $sth->bind_param(1, $ctx_id);
+  dbi_exec_stmt($stmt, $sth);
 
   my $directives;
   while (my @row = $sth->fetchrow_array()) {
@@ -174,7 +176,7 @@ sub get_ctx_directives {
     push(@$directives, { id => $id, name => $name, value => $value });
   }
 
-  dbi_free_sql($sth);
+  dbi_free_stmt($sth);
   return $directives;
 }
 
