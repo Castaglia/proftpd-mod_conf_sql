@@ -1,4 +1,7 @@
-CREATE TABLE ftpctx IF NOT EXISTS (
+CREATE DATABASE IF NOT EXISTS proftpd;
+USE proftpd;
+
+CREATE TABLE IF NOT EXISTS ftpctx (
   id SERIAL,
   parent_id INTEGER,
   name TEXT,
@@ -7,14 +10,14 @@ CREATE TABLE ftpctx IF NOT EXISTS (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE ftpconf IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS ftpconf (
   id SERIAL,
   name TEXT NOT NULL,
   value TEXT,
   PRIMARY KEY (id)
 );
 
-CREATE TABLE ftpmap IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS ftpmap (
   conf_id INTEGER NOT NULL,
   ctx_id INTEGER NOT NULL
 );

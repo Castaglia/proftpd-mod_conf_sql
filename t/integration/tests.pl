@@ -36,12 +36,14 @@ $| = 1;
 my $test_files = [
   ["$test_dir/sqlite.t", 'sqlite'],
   ["$test_dir/mysql.t", 'mysql'],
+  ["$test_dir/postgres.t", 'postgres'],
 ];
 
 # Create a temp directory for each separate test, pass it in, cleanup afterward
 my $tap_test_args = {
   'sqlite' => [get_tmp_dir()],
   'mysql' => [get_tmp_dir()],
+  'postgres' => [get_tmp_dir()],
 };
 
 my $tap_opts = {
