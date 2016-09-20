@@ -227,8 +227,9 @@ static int sqlconf_parse_map_param(pool *p, pr_table_t *params) {
  *   &map:<table>[:conf_id,ctx_id][:where=<clause>]\
  *   [&base_id=<name>]
  */
-static int sqlconf_parse_uri(pool *p, const char *uri, char **driver) {
-  int res, xerrno, use_tracing = FALSE;
+static int sqlconf_parse_uri(pool *p, const char *uri, char **driver,
+    int *use_tracing) {
+  int res, xerrno;
   char *host = NULL, *path = NULL, *username, *password;
   unsigned int port = 0;
   pr_table_t *params = NULL;
@@ -278,8 +279,8 @@ static int sqlconf_parse_uri(pool *p, const char *uri, char **driver) {
   if (v != NULL) {
     res = pr_str_is_boolean(v);
     if (res == TRUE) {
-      use_tracing = TRUE;
-      pr_trace_use_stderr(use_tracing);
+      *use_tracing = TRUE;
+      pr_trace_use_stderr(*use_tracing);
 
       /* TODO: Make the trace level a param as well. */
       pr_trace_set_levels(trace_channel, 1, 20);
@@ -356,16 +357,17 @@ static int sqlconf_parse_uri(pool *p, const char *uri, char **driver) {
     sqlconf_ctxs.base_id = v;
   }
 
+  pr_trace_msg(trace_channel, 6, "ctxs.base_id = %s",
+    sqlconf_ctxs.base_id ? sqlconf_ctxs.base_id : "(none)");
+
   /* Look for a specific database backend/driver to use. */
   v = pr_table_get(params, "driver", NULL);
   if (v != NULL) {
     *driver = pstrdup(p, (char *) v);
+    pr_trace_msg(trace_channel, 6, "driver = %s", *driver);
   }
 
-  pr_trace_msg(trace_channel, 6, "ctxs.base_id = %s",
-    sqlconf_ctxs.base_id ? sqlconf_ctxs.base_id : "(none)");
-
-  if (use_tracing) {
+  if (*use_tracing) {
     pr_trace_set_levels(trace_channel, 0, 0);
     pr_trace_use_stderr(FALSE);
   }
@@ -598,44 +600,56 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   return 0;
 }
 
-static int sqlconf_close_db(pool *p) {
+static int sqlconf_close_db(pool *p, int use_tracing) {
+  int res = 0, xerrno = 0;
   cmd_rec *cmd = NULL;
-  modret_t *res = NULL;
+  modret_t *mr = NULL;
 
   /* Close the connection. */
   cmd = sqlconf_cmd_alloc(p, 2, "sqlconf", "1");
-  res = sqlconf_dispatch(cmd, "sql_close_conn");
+  mr = sqlconf_dispatch(cmd, "sql_close_conn");
   destroy_pool(cmd->pool);
-  if (MODRET_ISERROR(res)) {
+  if (MODRET_ISERROR(mr)) {
     const char *errmsg;
 
-    errmsg = MODRET_ERRMSG(res);
+    errmsg = MODRET_ERRMSG(mr);
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error closing database connection: %s",
       errmsg ? errmsg : strerror(errno));
-    errno = EINVAL;
-    return -1;
+
+    xerrno = EINVAL;
+    res = -1;
   }
 
-  /* Cleanup the SQL subsystem. */
-  cmd = sqlconf_cmd_alloc(p, 0);
-  res = sqlconf_dispatch(cmd, "sql_cleanup");
-  destroy_pool(cmd->pool);
-  if (MODRET_ISERROR(res)) {
-    const char *errmsg;
+  if (res == 0) {
+    /* Cleanup the SQL subsystem. */
+    cmd = sqlconf_cmd_alloc(p, 0);
+    mr = sqlconf_dispatch(cmd, "sql_cleanup");
+    destroy_pool(cmd->pool);
+    if (MODRET_ISERROR(mr)) {
+      const char *errmsg;
 
-    errmsg = MODRET_ERRMSG(res);
-    pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
-      ": error cleaning up SQL system: %s", errmsg ? errmsg : strerror(errno));
-    errno = EINVAL;
-    return -1;
+      errmsg = MODRET_ERRMSG(mr);
+      pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
+        ": error cleaning up SQL system: %s",
+        errmsg ? errmsg : strerror(errno));
+
+      xerrno = EINVAL;
+      res = -1;
+    }
   }
 
-  return 0;
+  if (use_tracing) {
+    pr_trace_use_stderr(FALSE);
+    pr_trace_set_levels(trace_channel, 0, 0);
+  }
+
+  errno = xerrno;
+  return res;
 }
 
 /* Construct the configuration file from the database contents. */
-static int sqlconf_read_db(pool *p, const char *driver) {
+static int sqlconf_read_db(pool *p, char *driver, int use_tracing) {
   int id = 0;
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
@@ -643,11 +657,21 @@ static int sqlconf_read_db(pool *p, const char *driver) {
   const char *username, *password, *dsn;
   char *where, *which_id = NULL;
 
+  if (use_tracing) {
+    pr_trace_use_stderr(TRUE);
+
+    /* TODO: Make the trace level a param as well. */
+    pr_trace_set_levels(trace_channel, 1, 20);
+  }
+
   /* Load the SQL backend module we'll be using. */
   if (driver == NULL) {
     cmd = sqlconf_cmd_alloc(p, 0);
 
   } else {
+    pr_trace_msg(trace_channel, 9, "reading database using driver '%s'",
+      driver);
+
     /* The mod_sql_sqlite module uses a backend name of "sqlite3"; check
      * the driver name to see if that what was intended.
      */
@@ -692,6 +716,11 @@ static int sqlconf_read_db(pool *p, const char *driver) {
       ": error defining database connection: %s",
       errmsg ? errmsg : strerror(errno));
 
+    if (use_tracing) {
+      pr_trace_set_levels(trace_channel, 0, 0);
+      pr_trace_use_stderr(FALSE);
+    }
+
     errno = EINVAL;
     return -1;
   }
@@ -734,7 +763,7 @@ static int sqlconf_read_db(pool *p, const char *driver) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error retrieving %s context ID", which_id);
 
-    (void) sqlconf_close_db(p);
+    (void) sqlconf_close_db(p, use_tracing);
     errno = ENOENT;
     return -1;
   }
@@ -754,7 +783,7 @@ static int sqlconf_read_db(pool *p, const char *driver) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": retrieving %s context failed: bad/non-unique results", which_id);
 
-      (void) sqlconf_close_db(p);
+      (void) sqlconf_close_db(p, use_tracing);
       errno = ENOENT;
       return -1;
     }
@@ -764,7 +793,7 @@ static int sqlconf_read_db(pool *p, const char *driver) {
       pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
         ": retrieving %s context failed: no matching results", which_id);
 
-      (void) sqlconf_close_db(p);
+      (void) sqlconf_close_db(p, use_tracing);
       errno = ENOENT;
       return -1;
     }
@@ -780,7 +809,7 @@ static int sqlconf_read_db(pool *p, const char *driver) {
     sqlconf_read_ctx(p, id, TRUE);
   }
 
-  if (sqlconf_close_db(p) < 0) {
+  if (sqlconf_close_db(p, use_tracing) < 0) {
     return -1;
   }
 
@@ -825,17 +854,18 @@ static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     pool *p;
     char *driver = NULL, *uri;
+    int use_tracing = FALSE;
 
     p = conf_sql_pool;
     uri = pstrdup(p, path);
 
     /* Parse through the given URI, breaking out the needed pieces. */
-    if (sqlconf_parse_uri(p, uri, &driver) < 0) {
+    if (sqlconf_parse_uri(p, uri, &driver, &use_tracing) < 0) {
       return -1;
     }
 
     if (sqlconf_conf == NULL &&
-        sqlconf_read_db(p, driver) < 0) {
+        sqlconf_read_db(p, driver, use_tracing) < 0) {
       return -1;
     }
 
