@@ -3,7 +3,7 @@ proftpd-mod_conf_sql
 
 Status
 ------
-[![Build Status](https://travis-ci.org/Castaglia/proftpd-conf_sql.svg?branch=master)](https://travis-ci.org/Castaglia/proftpd-mod_conf_sql)
+[![Build Status](https://travis-ci.org/Castaglia/proftpd-mod_conf_sql.svg?branch=master)](https://travis-ci.org/Castaglia/proftpd-mod_conf_sql)
 [![License](https://img.shields.io/badge/license-GPL-brightgreen.svg)](https://img.shields.io/badge/license-GPL-brightgreen.svg)
 
 Synopsis
