@@ -15,8 +15,10 @@ my $debug = 1;
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
 my $proftpd_opts = "-t";
+my $tracing = "false";
 if ($debug) {
   $proftpd_opts = "-td10";
+  $tracing = "true";
 }
 
 my $config_file = "$ENV{TRAVIS_BUILD_DIR}/proftpd/sample-configurations/basic.conf";
@@ -41,7 +43,7 @@ eval { $res = run_cmd($cmd) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "built Postgres database");
 
-my $simple_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=postgres";
+my $simple_url = "sql://$username:$password\@localhost/$dbname?tracing=$tracing&driver=postgres";
 $cmd = "$proftpd $proftpd_opts -c '$simple_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
@@ -53,14 +55,14 @@ eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from simple Postgres URL again");
 
-my $complex_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=postgres&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+my $complex_url = "sql://$username:$password\@localhost/$dbname?tracing=$tracing&driver=postgres&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 $cmd = "$proftpd $proftpd_opts -c '$complex_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
 $ex = $@ if $@;
 ok($res && !defined($ex), "read empty config from complex Postgres URL");
 
-my $bad_url = "sql://$username:$password\@localhost/$dbname?tracing=true&driver=postgres&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
+my $bad_url = "sql://$username:$password\@localhost/$dbname?tracing=$tracing&driver=postgres&ctx=ftpconf_ctx:id,parent_id,type,value&map=ftpconf_map:conf_id,ctx_id&conf=ftpconf_conf:id,type,value";
 $cmd = "$proftpd $proftpd_opts -c '$bad_url'";
 $ex = undef;
 eval { $res = run_cmd($cmd, 1) };
