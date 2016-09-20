@@ -6,7 +6,7 @@ use Carp;
 use Cwd qw(abs_path realpath);
 use File::Path qw(mkpath rmtree);
 use File::Spec;
-use Test::Simple tests => 8;
+use Test::Simple tests => 1;
 
 my $tmpdir = $ARGV[0];
 my $proftpd = $ENV{PROFTPD_TEST_BIN};
@@ -21,6 +21,8 @@ $db_script = realpath($db_script);
 
 my $conf2sql = File::Spec->catfile($test_dir, '..', '..', 'conf2sql.pl');
 $conf2sql = realpath($conf2sql);
+
+ok(1, "no MySQL tests yet");
 
 =pod
 my ($ex, $res);

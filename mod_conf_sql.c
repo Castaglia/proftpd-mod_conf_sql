@@ -837,7 +837,6 @@ static int sqlconf_fsio_read(pr_fh_t *fh, int fd, char *buf, size_t buflen) {
       /* Read from our built-up buffer, until there are no more lines to be
        * read.
        */
-      pr_log_debug(DEBUG5, MOD_CONF_SQL_VERSION ": %s", lines[sqlconf_confi]);
       memcpy(buf, lines[sqlconf_confi++], buflen);
       return strlen(buf);
     }
