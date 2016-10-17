@@ -304,9 +304,9 @@ file:
   Include sql://...
 </pre>
 
-  <p><a name="SQLConfMissingModule"></a>
+  <p><a name="SQLConfMissingModule">
 <font color=red>Question</font>: When I try to tell <code>proftpd</code> to
-use my SQL URL, it fails saying "missing required mod_sql".  Why?<br>
+use my SQL URL, it fails saying "missing required mod_sql".  Why?<br></a>
 <pre>
   $ proftpd -nd10 -c 'sql:///home/tj/proftpd/proftpd.db?tracing=true&driver=sqlite'
   ...
@@ -319,10 +319,11 @@ your ProFTPD has <code>mod_sql</code> built as a <em>shared</em> module.
 This other <a href="#SQLConfSharedModules>FAQ</a> covers the shared module
 case.
 
-  <p><a name="SQLConfSQLite"></a>
+  <p><a name="SQLConfSQLite">
 <font color=red>Question</font>: I want to use a local SQLite database file as
 the configuration database for <code>mod_conf_sql</code>.  What should my
 SQL URL look like?<br>
+  </a>
 <font color=blue>Answer</font>: SQLite databases do not require usernames,
 passwords, or ports.  Thus the SQL URL should start with the "sql://" scheme
 prefix, followed by the full path to the SQLite database file:
