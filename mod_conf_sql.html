@@ -285,7 +285,7 @@ only, and should be removed from any production configuration.
 <p><a name="FAQ">
 <b>Frequently Asked Questions</b><br>
 
-<p><a name="SQLConfSharedModules">
+  <a name="SQLConfSharedModules"></a><p>
 <font color=red>Question</font>: How do I use <code>mod_conf_sql</code>, if
 all of my SQL modules were built as DSO/shared modules?<br>
 <font color=blue>Answer</font>: Use a <i>bootstrap</i> configuration file,
@@ -304,7 +304,7 @@ file:
   Include sql://...
 </pre>
 
-<p><a name="SQLConfMissingModule">
+  <a name="SQLConfMissingModule"></a><p>
 <font color=red>Question</font>: When I try to tell <code>proftpd</code> to
 use my SQL URL, it fails saying "missing required mod_sql".  Why?<br>
 <pre>
@@ -319,17 +319,18 @@ your ProFTPD has <code>mod_sql</code> built as a <em>shared</em> module.
 This other <a href="#SQLConfSharedModules">FAQ</a> covers the shared module
 case.
 
-<p><a name="SQLConfSQLite">
+  <a name="SQLConfSQLite"></a>
+  <p>
 <font color=red>Question</font>: I want to use a local SQLite database file as
 the configuration database for <code>mod_conf_sql</code>.  What should my
-SQL URL look like?<br>
+SQL URL look like?
+  <br>
 <font color=blue>Answer</font>: SQLite databases do not require usernames,
 passwords, or ports.  Thus the SQL URL should start with the "sql://" scheme
 prefix, followed by the full path to the SQLite database file:
 <pre>
   sql:///path/to/sqlite.db
 </pre>
-
 <p>
 <hr>
 <font size=2><b><i>
