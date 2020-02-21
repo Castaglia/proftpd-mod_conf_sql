@@ -21,10 +21,11 @@ TEST_API_DEPS=\
   $(top_srcdir)/src/str.o \
   $(top_srcdir)/src/sets.o \
   $(top_srcdir)/src/table.o \
+  $(top_srcdir)/src/support.o \
   $(module_srcdir)/uri.o \
   $(module_srcdir)/param.o
 
-TEST_API_LIBS=-lcheck
+TEST_API_LIBS=-lcheck -lm
 
 TEST_API_OBJS=\
   api/uri.o \

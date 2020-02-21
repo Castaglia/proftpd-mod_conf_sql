@@ -860,7 +860,6 @@ static int sqlconf_fsio_fstat(pr_fh_t *fh, int fd, struct stat *st) {
 
 static int sqlconf_fsio_lstat(pr_fs_t *fs, const char *path, struct stat *st) {
   /* Is this a path that we can use? */
-pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION ": fsio_lstat: path = '%s', prefix = '%s', prefix_len = 6", path, CONF_SQL_URI_PREFIX);
   if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
     sqlconf_set_stat(st);
     return 0;
