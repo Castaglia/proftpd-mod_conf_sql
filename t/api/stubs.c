@@ -99,3 +99,7 @@ int pr_trace_msg(const char *trace_channel, int level, const char *fmt, ...) {
 
   return 0;
 }
+
+int pr_vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list msg) {
+  return vsnprintf(buf, bufsz, fmt, msg);
+}
