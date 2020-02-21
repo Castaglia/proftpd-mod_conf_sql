@@ -13,6 +13,7 @@ install:
   - sudo apt-get update -qq
   # for unit tests
   - sudo apt-get install -y check
+  - sudo apt-get install -y libsubunit-dev
   # for mod_sql_mysql
   - sudo apt-get install -y libmysqlclient-dev
   # for mod_sql_postgres
@@ -20,9 +21,9 @@ install:
   # for mod_sql_sqlite
   - sudo apt-get install -y libsqlite3-dev sqlite3
   # for static code analysis
+  # - sudo apt-get install -y cppcheck rats
   # for Perl scripts
   - sudo apt-get install -y libdbi-perl libdbd-mysql-perl libdbd-pg-perl libdbd-sqlite3-perl
-  - sudo apt-get install -y cppcheck rats
   # for test code coverage
   - sudo apt-get install -y lcov
   - gem install coveralls-lcov
@@ -40,7 +41,7 @@ script:
   # - find . -type f -name "*.c" -print | grep -v t\/ | xargs rats --language=c
   - perl -cw ./conf2sql.pl
   - perl -cw ./sql2conf.pl
-  - git clone https://github.com/proftpd/proftpd.git
+  - git clone --depth 10 https://github.com/proftpd/proftpd.git
   - mkdir -p proftpd/contrib/mod_conf_sql/
   - cp *.[ch] proftpd/contrib/mod_conf_sql/
   - cp *.pl proftpd/contrib/mod_conf_sql/
@@ -51,9 +52,9 @@ script:
   - cp -R t/ proftpd/contrib/mod_conf_sql/t/
   - cp *.sql proftpd/contrib/mod_conf_sql/t/
   - cd proftpd
-  - ./configure --enable-devel=coverage --enable-dso --enable-tests --with-shared=mod_sql:mod_conf_sql
+  - ./configure LIBS='-lm -lsubunit -lrt -pthread' --enable-devel=coverage --enable-dso --enable-tests --with-shared=mod_sql:mod_conf_sql
   - make
   - make clean
-  - ./configure --enable-devel=coverage --enable-tests --with-modules=mod_sql:mod_sql_mysql:mod_sql_postgres:mod_sql_sqlite:mod_conf_sql
+  - ./configure LIBS='-lm -lsubunit -lrt -pthread' --enable-devel=coverage --enable-tests --with-modules=mod_sql:mod_sql_mysql:mod_sql_postgres:mod_sql_sqlite:mod_conf_sql
   - make
   - cd contrib/mod_conf_sql && make TEST_VERBOSE=1 check && cd ../../
