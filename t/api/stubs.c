@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_conf_sql API testsuite
- * Copyright (c) 2016 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2016-2020 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,17 @@ void pr_log_pri(int prio, const char *fmt, ...) {
 }
 
 void pr_signals_handle(void) {
+}
+
+int pr_snprintf(char *buf, size_t bufsz, const char *fmt, ...) {
+  int res;
+  va_list msg;
+
+  va_start(msg, fmt);
+  res = vsnprintf(buf, fmt, msg);
+  va_end(msg);
+
+  return res;
 }
 
 int pr_trace_msg(const char *trace_channel, int level, const char *fmt, ...) {
