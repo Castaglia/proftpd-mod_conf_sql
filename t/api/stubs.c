@@ -78,7 +78,7 @@ int pr_snprintf(char *buf, size_t bufsz, const char *fmt, ...) {
   va_list msg;
 
   va_start(msg, fmt);
-  res = vsnprintf(buf, fmt, msg);
+  res = vsnprintf(buf, bufsz, fmt, msg);
   va_end(msg);
 
   return res;
