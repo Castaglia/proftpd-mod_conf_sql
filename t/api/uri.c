@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_conf_sql testsuite
- * Copyright (c) 2016 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2016-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,52 +49,52 @@ START_TEST (uri_parse_args_test) {
 
   mark_point();
   res = sqlconf_uri_parse(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null URI");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null URI");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "foo";
   res = sqlconf_uri_parse(p, uri, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null host");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null host");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, uri, &host, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null port");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null port");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, uri, &host, &port, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null path");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null path");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null username");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null username");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null password");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null password");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     NULL);
-  fail_unless(res < 0, "Failed to handle null params");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null params");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }
 END_TEST
@@ -112,24 +112,24 @@ START_TEST (uri_parse_scheme_test) {
   uri = "foo";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s'", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s'", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "foobarbaz";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s'", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s'", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "sql://";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s'", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s'", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pr_table_free(params);
@@ -150,9 +150,9 @@ START_TEST (uri_parse_host_test) {
   expected = "castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(host != NULL, "Failed to parse host out of URI '%s'", uri);
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(host != NULL, "Failed to parse host out of URI '%s'", uri);
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
 
   mark_point();
@@ -160,9 +160,9 @@ START_TEST (uri_parse_host_test) {
   expected = "127.0.0.1";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(host != NULL, "Failed to parse host out of URI '%s'", uri);
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(host != NULL, "Failed to parse host out of URI '%s'", uri);
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
 
   mark_point();
@@ -170,17 +170,17 @@ START_TEST (uri_parse_host_test) {
   expected = "::1";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(host != NULL, "Failed to parse host out of URI '%s'", uri);
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(host != NULL, "Failed to parse host out of URI '%s'", uri);
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
 
   mark_point();
   uri = "sql://[::1";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Parsed URI '%s' unexpectedly", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Parsed URI '%s' unexpectedly", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
@@ -188,9 +188,9 @@ START_TEST (uri_parse_host_test) {
   expected = "/path/to/some/file";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(host != NULL, "Failed to parse host out of URI '%s'", uri);
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(host != NULL, "Failed to parse host out of URI '%s'", uri);
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
 
   pr_table_free(params);
@@ -210,39 +210,42 @@ START_TEST (uri_parse_port_test) {
   uri = "sql://castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(port == 0, "Failed to parse port out of URI '%s'", uri);
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(port == 0, "Failed to parse port out of URI '%s'", uri);
 
   mark_point();
   uri = "sql://castaglia.org:3567";
   expected = 3567;
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(port == expected, "Expected %u, got %u", expected, port);
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(port == expected, "Expected %u, got %u", expected, port);
 
   mark_point();
   uri = "sql://castaglia.org:foo";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s': %s", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s': %s", uri,
+    strerror(errno));
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "sql://castaglia.org:0";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s': %s", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s': %s", uri,
+    strerror(errno));
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "sql://castaglia.org:70000";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s': %s", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s': %s", uri,
+    strerror(errno));
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pr_table_free(params);
@@ -262,59 +265,59 @@ START_TEST (uri_parse_userinfo_test) {
   uri = "sql://castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(username == NULL, "Expected null username, got %s", username);
-  fail_unless(password == NULL, "Expected null password, got %s", password);
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(username == NULL, "Expected null username, got %s", username);
+  ck_assert_msg(password == NULL, "Expected null password, got %s", password);
 
   mark_point();
   uri = "sql://user@castaglia.org";
   expected = "user";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(username == NULL, "Expected null username, got %s", username);
-  fail_unless(password == NULL, "Expected null password, got %s", password);
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(username == NULL, "Expected null username, got %s", username);
+  ck_assert_msg(password == NULL, "Expected null password, got %s", password);
 
   mark_point();
   uri = "sql://user:pass@castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
 
   expected = "user";
-  fail_unless(username != NULL, "Expected username, got null");
-  fail_unless(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(username != NULL, "Expected username, got null");
+  ck_assert_msg(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
     expected, username);
 
   expected = "pass";
-  fail_unless(password != NULL, "Expected password, got null");
-  fail_unless(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(password != NULL, "Expected password, got null");
+  ck_assert_msg(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
     expected, password);
 
   mark_point();
   uri = "sql://user:@castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
 
   expected = "user";
-  fail_unless(username != NULL, "Expected username, got null");
-  fail_unless(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(username != NULL, "Expected username, got null");
+  ck_assert_msg(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
     expected, username);
 
   expected = "";
-  fail_unless(password != NULL, "Expected password, got null");
-  fail_unless(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(password != NULL, "Expected password, got null");
+  ck_assert_msg(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
     expected, password);
 
   mark_point();
   uri = "sql://@castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to handle parse URI '%s': %s", uri,
+  ck_assert_msg(res == 0, "Failed to handle parse URI '%s': %s", uri,
     strerror(errno));
-  fail_unless(username == NULL, "Expected null username, got %s", username);
-  fail_unless(password == NULL, "Expected null password, got %s", password);
+  ck_assert_msg(username == NULL, "Expected null username, got %s", username);
+  ck_assert_msg(password == NULL, "Expected null password, got %s", password);
 
   pr_table_free(params);
 }
@@ -333,17 +336,17 @@ START_TEST (uri_parse_path_test) {
   uri = "sql://castaglia.org";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(path == NULL, "Expected null path, got %s", path);
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(path == NULL, "Expected null path, got %s", path);
 
   mark_point();
   uri = "sql://castaglia.org/path";
   expected = "/path";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(path != NULL, "Expected path, got null");
-  fail_unless(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(path != NULL, "Expected path, got null");
+  ck_assert_msg(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
     path);
 
   mark_point();
@@ -351,9 +354,9 @@ START_TEST (uri_parse_path_test) {
   expected = "/path/to/resource";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(path != NULL, "Expected path, got null");
-  fail_unless(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(path != NULL, "Expected path, got null");
+  ck_assert_msg(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
     path);
 
   mark_point();
@@ -361,9 +364,9 @@ START_TEST (uri_parse_path_test) {
   expected = "/path/to/resource";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
-  fail_unless(path != NULL, "Expected path, got null");
-  fail_unless(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(path != NULL, "Expected path, got null");
+  ck_assert_msg(strcmp(path, expected) == 0, "Expected '%s', got '%s'", expected,
     path);
 
   pr_table_empty(params);
@@ -384,8 +387,8 @@ START_TEST (uri_parse_params_test) {
   uri = "sql://castaglia.org?foo";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s'", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s'", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
@@ -393,33 +396,33 @@ START_TEST (uri_parse_params_test) {
   uri = "sql://castaglia.org?foo=";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   res = pr_table_count(params);
-  fail_unless(res == 1, "Expected 1 parameter, got %d", res);
+  ck_assert_msg(res == 1, "Expected 1 parameter, got %d", res);
 
   mark_point();
   uri = "sql://castaglia.org?foo=&";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res < 0, "Failed to handle invalid URI '%s'", uri);
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle invalid URI '%s'", uri);
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   uri = "sql://castaglia.org?foo=bar&foo=baz";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   res = pr_table_count(params);
-  fail_unless(res == 1, "Expected 1 parameter, got %d", res);
+  ck_assert_msg(res == 1, "Expected 1 parameter, got %d", res);
 
   mark_point();
   uri = "sql://castaglia.org?foo=bar&baz=quxx&foo=baz";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   res = pr_table_count(params);
-  fail_unless(res == 2, "Expected 2 parameters, got %d", res);
+  ck_assert_msg(res == 2, "Expected 2 parameters, got %d", res);
 
   pr_table_empty(params);
   pr_table_free(params);
@@ -443,26 +446,26 @@ START_TEST (uri_parse_real_uris_test) {
   uri = "sql://user:pass@server:12345/dbname";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   expected = "server";
-  fail_unless(host != NULL, "Expected host, got null");
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(host != NULL, "Expected host, got null");
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
   expected = "/dbname";
-  fail_unless(path != NULL, "Expected path, got null");
-  fail_unless(strcmp(path, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(path != NULL, "Expected path, got null");
+  ck_assert_msg(strcmp(path, expected) == 0, "Expected '%s', got '%s'",
     expected, path);
   expected = "user";
-  fail_unless(username != NULL, "Expected username, got null");
-  fail_unless(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(username != NULL, "Expected username, got null");
+  ck_assert_msg(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
     expected, username);
   expected = "pass";
-  fail_unless(password != NULL, "Expected password, got null");
-  fail_unless(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(password != NULL, "Expected password, got null");
+  ck_assert_msg(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
     expected, password);
-  fail_unless(port == 12345, "Expected 12345, got %u", port);
+  ck_assert_msg(port == 12345, "Expected 12345, got %u", port);
   res = pr_table_count(params);
-  fail_unless(res == 0, "Expected 0 parameters, got %d", res);
+  ck_assert_msg(res == 0, "Expected 0 parameters, got %d", res);
 
   mark_point();
   host = path = username = password = NULL;
@@ -471,17 +474,17 @@ START_TEST (uri_parse_real_uris_test) {
   uri = "sql:///path/to/sqlite.db?database=dbname";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   expected = "/path/to/sqlite.db";
-  fail_unless(host != NULL, "Expected host, got null");
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(host != NULL, "Expected host, got null");
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
-  fail_unless(path == NULL, "Expected null, got path '%s'", path);
-  fail_unless(username == NULL, "Expected null, got username '%s'", username);
-  fail_unless(password == NULL, "Expected null, got password '%s'", password);
-  fail_unless(port == 0, "Expected 0, got %u", port);
+  ck_assert_msg(path == NULL, "Expected null, got path '%s'", path);
+  ck_assert_msg(username == NULL, "Expected null, got username '%s'", username);
+  ck_assert_msg(password == NULL, "Expected null, got password '%s'", password);
+  ck_assert_msg(port == 0, "Expected 0, got %u", port);
   res = pr_table_count(params);
-  fail_unless(res == 1, "Expected 1 parameter, got %d", res);
+  ck_assert_msg(res == 1, "Expected 1 parameter, got %d", res);
 
   /* Note that this will not parse as expected.  Using an absolute path as
    * the hostname makes it hard to determine the URL path, as the same
@@ -494,17 +497,17 @@ START_TEST (uri_parse_real_uris_test) {
   uri = "sql:///path/to/sqlite.db/dbname";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   expected = "/path/to/sqlite.db/dbname";
-  fail_unless(host != NULL, "Expected host, got null");
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(host != NULL, "Expected host, got null");
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
-  fail_unless(path == NULL, "Expected null, got path '%s'", path);
-  fail_unless(username == NULL, "Expected null, got username '%s'", username);
-  fail_unless(password == NULL, "Expected null, got password '%s'", password);
-  fail_unless(port == 0, "Expected 0, got %u", port);
+  ck_assert_msg(path == NULL, "Expected null, got path '%s'", path);
+  ck_assert_msg(username == NULL, "Expected null, got username '%s'", username);
+  ck_assert_msg(password == NULL, "Expected null, got password '%s'", password);
+  ck_assert_msg(port == 0, "Expected 0, got %u", port);
   res = pr_table_count(params);
-  fail_unless(res == 0, "Expected 0 parameters, got %d", res);
+  ck_assert_msg(res == 0, "Expected 0 parameters, got %d", res);
 
   mark_point();
   host = path = username = password = NULL;
@@ -513,23 +516,23 @@ START_TEST (uri_parse_real_uris_test) {
   uri = "sql://foo:bar@localhost?database=proftpd&ctx=vhostctx&conf=vhostconf&map=vhostmap&base_id=7";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   expected = "localhost";
-  fail_unless(host != NULL, "Expected host, got null");
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(host != NULL, "Expected host, got null");
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
-  fail_unless(path == NULL, "Expected null, got path '%s'", path);
+  ck_assert_msg(path == NULL, "Expected null, got path '%s'", path);
   expected = "foo";
-  fail_unless(username != NULL, "Expected username, got null");
-  fail_unless(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(username != NULL, "Expected username, got null");
+  ck_assert_msg(strcmp(username, expected) == 0, "Expected '%s', got '%s'",
     expected, username);
   expected = "bar";
-  fail_unless(password != NULL, "Expected password, got null");
-  fail_unless(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(password != NULL, "Expected password, got null");
+  ck_assert_msg(strcmp(password, expected) == 0, "Expected '%s', got '%s'",
     expected, password);
-  fail_unless(port == 0, "Expected 0, got %u", port);
+  ck_assert_msg(port == 0, "Expected 0, got %u", port);
   res = pr_table_count(params);
-  fail_unless(res == 5, "Expected 5 parameters, got %d", res);
+  ck_assert_msg(res == 5, "Expected 5 parameters, got %d", res);
 
   mark_point();
   host = path = username = password = NULL;
@@ -538,17 +541,17 @@ START_TEST (uri_parse_real_uris_test) {
   uri = "sql:///Users/tj/git/proftpd-mod_conf_sql/proftpd.db?ctx=ftpctx:id,parent_id,name,type,value&conf=ftpconf:id,type,value";
   res = sqlconf_uri_parse(p, uri, &host, &port, &path, &username, &password,
     params);
-  fail_unless(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse URI '%s': %s", uri, strerror(errno));
   expected = "/Users/tj/git/proftpd-mod_conf_sql/proftpd.db";
-  fail_unless(host != NULL, "Expected host, got null");
-  fail_unless(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(host != NULL, "Expected host, got null");
+  ck_assert_msg(strcmp(host, expected) == 0, "Expected '%s', got '%s'",
     expected, host);
-  fail_unless(path == NULL, "Expected null, got path '%s'", path);
-  fail_unless(username == NULL, "Expected null, got username");
-  fail_unless(password == NULL, "Expected null, got password");
-  fail_unless(port == 0, "Expected 0, got %u", port);
+  ck_assert_msg(path == NULL, "Expected null, got path '%s'", path);
+  ck_assert_msg(username == NULL, "Expected null, got username");
+  ck_assert_msg(password == NULL, "Expected null, got password");
+  ck_assert_msg(port == 0, "Expected 0, got %u", port);
   res = pr_table_count(params);
-  fail_unless(res == 2, "Expected 2 parameters, got %d", res);
+  ck_assert_msg(res == 2, "Expected 2 parameters, got %d", res);
 
   pr_table_empty(params);
   pr_table_free(params);
@@ -563,28 +566,28 @@ START_TEST (uri_urldecode_test) {
 
   mark_point();
   res = sqlconf_uri_urldecode(NULL, NULL, 0, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_urldecode(p, NULL, 0, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null src");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null src");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   src = "foo+bar%20baz";
 
   mark_point();
   res = sqlconf_uri_urldecode(p, src, 0, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null dst");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null dst");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_uri_urldecode(p, src, 0, &dst, NULL);
-  fail_unless(res < 0, "Failed to handle null dstsz");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null dstsz");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   dst = NULL;
@@ -592,28 +595,28 @@ START_TEST (uri_urldecode_test) {
 
   mark_point();
   res = sqlconf_uri_urldecode(p, src, 0, &dst, &dstsz);
-  fail_unless(res == 0, "Failed to handle zero-length src: %s",
+  ck_assert_msg(res == 0, "Failed to handle zero-length src: %s",
     strerror(errno));
   expected = "";
-  fail_unless(dst != NULL, "Expected dst, got null");
-  fail_unless(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(dst != NULL, "Expected dst, got null");
+  ck_assert_msg(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
     expected, dst);
-  fail_unless(dstsz == 0, "Expected 0, got %lu", (unsigned long) dstsz);
+  ck_assert_msg(dstsz == 0, "Expected 0, got %lu", (unsigned long) dstsz);
 
   dst = NULL;
   dstsz = 0;
 
   mark_point();
   res = sqlconf_uri_urldecode(p, src, strlen(src), &dst, &dstsz);
-  fail_unless(res == 0, "Failed to handle src '%s': %s", src,
+  ck_assert_msg(res == 0, "Failed to handle src '%s': %s", src,
     strerror(errno));
   expected = "foo bar baz";
-  fail_unless(dst != NULL, "Expected dst, got null");
-  fail_unless(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(dst != NULL, "Expected dst, got null");
+  ck_assert_msg(strcmp(dst, expected) == 0, "Expected '%s', got '%s'",
     expected, dst);
 
   expectedsz = strlen(expected);
-  fail_unless(dstsz == expectedsz, "Expected %lu, got %lu",
+  ck_assert_msg(dstsz == expectedsz, "Expected %lu, got %lu",
     (unsigned long) expectedsz, (unsigned long) dstsz);
 }
 END_TEST
