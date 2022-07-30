@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_conf_sql testsuite
- * Copyright (c) 2016 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2016-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,48 +52,48 @@ START_TEST (param_parse_conf_test) {
 
   mark_point();
   res = sqlconf_param_parse_conf(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null params");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null params");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   params = pr_table_alloc(p, 1);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null table");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null table");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null id_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null id_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null name_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null name_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col, NULL,
     NULL);
-  fail_unless(res < 0, "Failed to handle null value_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null value_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, NULL);
-  fail_unless(res < 0, "Failed to handle null where");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null where");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   /* No "conf" parameter. */
@@ -102,13 +102,13 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(name_col == NULL, "Expected null, got name_col '%s'", name_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* Empty "conf" parameter. */
   pr_table_empty(params);
@@ -119,13 +119,13 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(name_col == NULL, "Expected null, got name_col '%s'", name_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with just the table name. */
   table = id_col = name_col = value_col = where = NULL;
@@ -137,16 +137,16 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(name_col == NULL, "Expected null, got name_col '%s'", name_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with table name and WHERE clause, no column names. */
   table = id_col = name_col = value_col = where = NULL;
@@ -158,18 +158,18 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(name_col == NULL, "Expected null, got name_col '%s'", name_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(name_col == NULL, "Expected null, got name_col '%s'", name_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   expected = "WHERE=bar";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "conf" parameter with table name, and column names, and no WHERE clause. */
@@ -182,24 +182,24 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_name_col";
-  fail_unless(name_col != NULL, "Expected name_col, got null");
-  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(name_col != NULL, "Expected name_col, got null");
+  ck_assert_msg(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
     expected, name_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "conf" parameter with table name, column names, and WHERE clause. */
   table = id_col = name_col = value_col = where = NULL;
@@ -211,26 +211,26 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_name_col";
-  fail_unless(name_col != NULL, "Expected name_col, got null");
-  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(name_col != NULL, "Expected name_col, got null");
+  ck_assert_msg(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
     expected, name_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
   expected = "WHERE=barbaz";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "conf" parameter with table name, column names, and a complex WHERE
@@ -249,26 +249,26 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res == 0, "Failed to parse conf param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse conf param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_name_col";
-  fail_unless(name_col != NULL, "Expected name_col, got null");
-  fail_unless(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(name_col != NULL, "Expected name_col, got null");
+  ck_assert_msg(strcmp(name_col, expected) == 0, "Expected '%s', got '%s'",
     expected, name_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
   expected = "WHERE=foo = 1 AND bar = 'baz'";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* Malformed "conf" parameters. */
@@ -281,9 +281,9 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res < 0, "Failed to handle invalid conf param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid conf param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   table = id_col = name_col = value_col = where = NULL;
@@ -295,9 +295,9 @@ START_TEST (param_parse_conf_test) {
   mark_point();
   res = sqlconf_param_parse_conf(p, params, &table, &id_col, &name_col,
     &value_col, &where);
-  fail_unless(res < 0, "Failed to handle invalid conf param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid conf param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pr_table_empty(params);
@@ -317,57 +317,57 @@ START_TEST (param_parse_ctx_test) {
 
   mark_point();
   res = sqlconf_param_parse_ctx(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null params");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null params");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   params = pr_table_alloc(p, 1);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null table");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null table");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, NULL, NULL, NULL, NULL,
     NULL);
-  fail_unless(res < 0, "Failed to handle null id_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null id_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, NULL, NULL, NULL,
     NULL);
-  fail_unless(res < 0, "Failed to handle null parent_id_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null parent_id_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null type_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null type_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null value_col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null value_col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, NULL);
-  fail_unless(res < 0, "Failed to handle null where");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null where");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   /* No "ctx" parameter. */
@@ -376,15 +376,15 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(type_col == NULL, "Expected null, got type_col '%s'", type_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* Empty "ctx" parameter. */
   pr_table_empty(params);
@@ -395,15 +395,15 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(type_col == NULL, "Expected null, got type_col '%s'", type_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with just the table name. */
   table = id_col = parent_id_col = type_col = value_col = where = NULL;
@@ -415,18 +415,18 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(type_col == NULL, "Expected null, got type_col '%s'", type_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with table name and WHERE clause, no column names. */
   table = id_col = parent_id_col = type_col = value_col = where = NULL;
@@ -438,20 +438,20 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(id_col == NULL, "Expected null, got id_col '%s'", id_col);
-  fail_unless(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
+  ck_assert_msg(id_col == NULL, "Expected null, got id_col '%s'", id_col);
+  ck_assert_msg(parent_id_col == NULL, "Expected null, got parent_id_col '%s'",
     parent_id_col);
-  fail_unless(type_col == NULL, "Expected null, got type_col '%s'", type_col);
-  fail_unless(value_col == NULL, "Expected null, got value_col '%s'",
+  ck_assert_msg(type_col == NULL, "Expected null, got type_col '%s'", type_col);
+  ck_assert_msg(value_col == NULL, "Expected null, got value_col '%s'",
     value_col);
   expected = "WHERE=bar";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "ctx" parameter with table name, column names, and no WHERE clause. */
@@ -464,28 +464,28 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_parentid_col";
-  fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
-  fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(parent_id_col != NULL, "Expected parent_id_col, got null");
+  ck_assert_msg(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
   expected = "my_type_col";
-  fail_unless(type_col != NULL, "Expected type_col, got null");
-  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(type_col != NULL, "Expected type_col, got null");
+  ck_assert_msg(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
     expected, type_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "ctx" parameter with table name, column names, and WHERE clause. */
   table = id_col = parent_id_col = type_col = value_col = where = NULL;
@@ -497,30 +497,30 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_parentid_col";
-  fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
-  fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(parent_id_col != NULL, "Expected parent_id_col, got null");
+  ck_assert_msg(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
   expected = "my_type_col";
-  fail_unless(type_col != NULL, "Expected type_col, got null");
-  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(type_col != NULL, "Expected type_col, got null");
+  ck_assert_msg(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
     expected, type_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
   expected = "WHERE=barbaz";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "ctx" parameter with table name, column names, and a complex WHERE
@@ -539,30 +539,30 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res == 0, "Failed to parse ctx param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse ctx param: %s", strerror(errno));
   expected = "my_table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_id_col";
-  fail_unless(id_col != NULL, "Expected id_col, got null");
-  fail_unless(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(id_col != NULL, "Expected id_col, got null");
+  ck_assert_msg(strcmp(id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, id_col);
   expected = "my_parentid_col";
-  fail_unless(parent_id_col != NULL, "Expected parent_id_col, got null");
-  fail_unless(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(parent_id_col != NULL, "Expected parent_id_col, got null");
+  ck_assert_msg(strcmp(parent_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, parent_id_col);
   expected = "my_type_col";
-  fail_unless(type_col != NULL, "Expected type_col, got null");
-  fail_unless(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(type_col != NULL, "Expected type_col, got null");
+  ck_assert_msg(strcmp(type_col, expected) == 0, "Expected '%s', got '%s'",
     expected, type_col);
   expected = "my_val_col";
-  fail_unless(value_col != NULL, "Expected value_col, got null");
-  fail_unless(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(value_col != NULL, "Expected value_col, got null");
+  ck_assert_msg(strcmp(value_col, expected) == 0, "Expected '%s', got '%s'",
     expected, value_col);
   expected = "WHERE=foo = 1 AND bar = 'baz'";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* Malformed "ctx" parameters. */
@@ -575,9 +575,9 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res < 0, "Failed to handle invalid ctx param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid ctx param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   table = id_col = parent_id_col = type_col = value_col = where = NULL;
@@ -589,9 +589,9 @@ START_TEST (param_parse_ctx_test) {
   mark_point();
   res = sqlconf_param_parse_ctx(p, params, &table, &id_col, &parent_id_col,
     &type_col, &value_col, &where);
-  fail_unless(res < 0, "Failed to handle invalid ctx param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid ctx param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pr_table_empty(params);
@@ -610,41 +610,41 @@ START_TEST (param_parse_map_test) {
 
   mark_point();
   res = sqlconf_param_parse_map(NULL, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_map(p, NULL, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null params");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null params");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   params = pr_table_alloc(p, 1);
 
   mark_point();
   res = sqlconf_param_parse_map(p, params, NULL, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null table");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null table");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null conf ID col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null conf ID col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null ctx ID col");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null ctx ID col");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     NULL);
-  fail_unless(res < 0, "Failed to handle null where");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null where");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   /* No "map" parameter. */
@@ -653,13 +653,13 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
     conf_id_col);
-  fail_unless(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
+  ck_assert_msg(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
     ctx_id_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* Empty "map" parameter. */
   table = conf_id_col = ctx_id_col = where = NULL;
@@ -671,13 +671,13 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
-  fail_unless(table == NULL, "Expected null, got table '%s'", table);
-  fail_unless(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(table == NULL, "Expected null, got table '%s'", table);
+  ck_assert_msg(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
     conf_id_col);
-  fail_unless(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
+  ck_assert_msg(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
     ctx_id_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "map" parameter with just the table name. */
   table = conf_id_col = ctx_id_col = where = NULL;
@@ -689,16 +689,16 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
+  ck_assert_msg(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
     conf_id_col);
-  fail_unless(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
+  ck_assert_msg(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
     ctx_id_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "map" parameter table name and WHERE clause, no column names. */
   table = conf_id_col = ctx_id_col = where = NULL;
@@ -710,18 +710,18 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
-  fail_unless(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
+  ck_assert_msg(conf_id_col == NULL, "Expected null, got conf_id_col '%s'",
     conf_id_col);
-  fail_unless(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
+  ck_assert_msg(ctx_id_col == NULL, "Expected null, got ctx_id_col '%s'",
     ctx_id_col);
   expected = "WHERE=foo";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "map" parameter table name, column names, and no WHERE clause. */
@@ -734,20 +734,20 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_conf_id";
-  fail_unless(conf_id_col != NULL, "Expected conf_id_col, got null");
-  fail_unless(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(conf_id_col != NULL, "Expected conf_id_col, got null");
+  ck_assert_msg(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, conf_id_col);
   expected = "my_ctx_id";
-  fail_unless(ctx_id_col != NULL, "Expected ctx_id_col, got null");
-  fail_unless(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(ctx_id_col != NULL, "Expected ctx_id_col, got null");
+  ck_assert_msg(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, ctx_id_col);
-  fail_unless(where == NULL, "Expected null, got where '%s'", where);
+  ck_assert_msg(where == NULL, "Expected null, got where '%s'", where);
 
   /* "map" parameter table name, column names, and WHERE clause. */
   table = conf_id_col = ctx_id_col = where = NULL;
@@ -759,22 +759,22 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_conf_id";
-  fail_unless(conf_id_col != NULL, "Expected conf_id_col, got null");
-  fail_unless(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(conf_id_col != NULL, "Expected conf_id_col, got null");
+  ck_assert_msg(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, conf_id_col);
   expected = "my_ctx_id";
-  fail_unless(ctx_id_col != NULL, "Expected ctx_id_col, got null");
-  fail_unless(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(ctx_id_col != NULL, "Expected ctx_id_col, got null");
+  ck_assert_msg(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, ctx_id_col);
   expected = "WHERE=foo";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* "map" parameter table name, column names, and a complex WHERE clause.
@@ -792,22 +792,22 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res == 0, "Failed to parse map param: %s", strerror(errno));
+  ck_assert_msg(res == 0, "Failed to parse map param: %s", strerror(errno));
   expected = "table";
-  fail_unless(table != NULL, "Expected table, got null");
-  fail_unless(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(table != NULL, "Expected table, got null");
+  ck_assert_msg(strcmp(table, expected) == 0, "Expected '%s', got '%s'",
     expected, table);
   expected = "my_conf_id";
-  fail_unless(conf_id_col != NULL, "Expected conf_id_col, got null");
-  fail_unless(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(conf_id_col != NULL, "Expected conf_id_col, got null");
+  ck_assert_msg(strcmp(conf_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, conf_id_col);
   expected = "my_ctx_id";
-  fail_unless(ctx_id_col != NULL, "Expected ctx_id_col, got null");
-  fail_unless(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(ctx_id_col != NULL, "Expected ctx_id_col, got null");
+  ck_assert_msg(strcmp(ctx_id_col, expected) == 0, "Expected '%s', got '%s'",
     expected, ctx_id_col);
   expected = "WHERE=foo = 1 AND bar = 'baz'";
-  fail_unless(where != NULL, "Expected where, got null");
-  fail_unless(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(where != NULL, "Expected where, got null");
+  ck_assert_msg(strcmp(where, expected) == 0, "Expected '%s', got '%s'",
     expected, where);
 
   /* Malformed "map" parameters. */
@@ -820,9 +820,9 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res < 0, "Failed to handle invalid map param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid map param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   table = conf_id_col = ctx_id_col = where = NULL;
@@ -834,9 +834,9 @@ START_TEST (param_parse_map_test) {
   mark_point();
   res = sqlconf_param_parse_map(p, params, &table, &conf_id_col, &ctx_id_col,
     &where);
-  fail_unless(res < 0, "Failed to handle invalid map param '%s': %s",
+  ck_assert_msg(res < 0, "Failed to handle invalid map param '%s': %s",
     param, strerror(errno));
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pr_table_empty(params);

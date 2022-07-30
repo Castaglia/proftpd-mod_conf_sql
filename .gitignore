@@ -5,8 +5,10 @@ config.status
 autom4te.cache
 mod_conf_sql.h
 tests.log
+t/api-tests
 .libs
 .*.swp
+*.a
 *.la
 *.lo
 *Tests*.log
