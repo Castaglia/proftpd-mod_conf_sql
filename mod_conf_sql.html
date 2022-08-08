@@ -108,6 +108,27 @@ Example PostgresQL schema:
     ctx_id INTEGER NOT NULL
   );
 </pre>
+Example SQLite schema:
+<pre>
+  CREATE TABLE IF NOT EXISTS ftpctx (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER UNSIGNED,
+    name TEXT,
+    type TEXT,
+    value TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS ftpconf (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    value BLOB
+  );
+
+  CREATE TABLE IF NOT EXISTS ftpmap (
+    conf_id INTEGER UNSIGNED NOT NULL,
+    ctx_id INTEGER UNSIGNED NOT NULL
+  );
+</pre>
 Each context and configuration directive is assigned a unique ID.  The
 <code>ftpmap</code> table maps the configuration directive to its appropriate
 context by IDs.  In addition, each context has a parent context, which
