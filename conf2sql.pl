@@ -87,7 +87,7 @@ my $i = 0;
 my $ctxno = 1;
 while (chomp(my $line = <$conf>)) {
   $i++;
- 
+
   # Skip comments and blank lines
   next if $line =~ /^(\s{0,})?#/;
   next if $line =~ /^\s{0,}$/;
@@ -95,7 +95,7 @@ while (chomp(my $line = <$conf>)) {
   # Trim leading, trailing whitespace
   $line =~ s/^\s{0,}//;
   $line =~ s/\s{0,}$//;
- 
+
   # Check for line continuations, and concatenate the next line.
   while ($line =~ /\\$/) {
 

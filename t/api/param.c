@@ -38,7 +38,7 @@ static void tear_down(void) {
   if (p) {
     destroy_pool(p);
     p = NULL;
-  } 
+  }
 }
 
 /* Expected format of the conf parameter:
