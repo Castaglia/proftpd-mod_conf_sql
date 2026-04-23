@@ -33,12 +33,12 @@ jobs:
 
     steps:
       - name: Checkout ProFTPD
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: proftpd/proftpd
 
       - name: Checkout mod_conf_sql
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: contrib/mod_conf_sql
 
@@ -52,7 +52,7 @@ jobs:
           ./configure --with-modules=mod_sql:mod_sql_sqlite:mod_conf_sql
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           config-file: contrib/mod_conf_sql/.codeql.yml
@@ -64,7 +64,7 @@ jobs:
           make
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
           checkout_path: contrib/mod_conf_sql
@@ -72,7 +72,7 @@ jobs:
           upload: false
 
       - name: Upload CodeQL SARIF
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v4
         with:
           checkout_path: contrib/mod_conf_sql
           sarif_file: "sarif-results/${{ matrix.language }}.sarif"
