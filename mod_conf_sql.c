@@ -1,6 +1,6 @@
 /*
  * ProFTPD: mod_conf_sql -- a module for reading configurations from SQL tables
- * Copyright (c) 2003-2016 TJ Saunders
+ * Copyright (c) 2003-2026 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,8 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307, USA.
+ * along with this program; if not, see <https://www.gnu.org/licenses/>.
  *
  * As a special exemption, TJ Saunders and other respective copyright holders
  * give permission to link this program with OpenSSL, and distribute the
@@ -96,7 +95,7 @@ static int use_tracing = FALSE;
 static const char *trace_channel = "conf_sql";
 
 /* Prototypes */
-static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase);
+static int sqlconf_read_ctx(pool *p, int ctx_id, int is_base);
 static void sqlconf_register(pool *p);
 
 static int sqlconf_parse_ctx_param(pool *p, pr_table_t *params) {
@@ -473,6 +472,7 @@ static int sqlconf_read_ctx_ctxs(pool *p, int ctx_id) {
   sd = res->data;
 
   for (i = 0; i < sd->rnum; i++) {
+    pr_signals_handle();
     sqlconf_read_ctx(p, atoi(sd->data[i]), FALSE);
   }
 
@@ -535,14 +535,12 @@ static int sqlconf_read_conf(pool *p, int ctx_id) {
   return 0;
 }
 
-static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
+static int sqlconf_read_ctx(pool *p, int ctx_id, int is_base) {
   cmd_rec *cmd = NULL;
   modret_t *res = NULL;
   sql_data_t *sd = NULL;
-  char *where = NULL;
-
+  char *ctx_key = NULL, *ctx_val = NULL, *where = NULL;
   char idstr[64] = {'\0'};
-  char *ctx_key = NULL, *ctx_val = NULL;
 
   snprintf(idstr, sizeof(idstr)-1, "%d", ctx_id);
   idstr[sizeof(idstr)-1] = '\0';
@@ -569,7 +567,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   sd = res->data;
 
-  if (sd->rnum > 1) {
+  if (sd->rnum != 1) {
     pr_log_debug(DEBUG0, MOD_CONF_SQL_VERSION
       ": error: multiple key/values returned for given context ID (%d)",
       ctx_id);
@@ -579,17 +577,20 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
 
   ctx_key = sd->data[0];
   if (sd->fnum > 1) {
-    size_t len;
+    size_t len = 0;
 
     ctx_val = sd->data[1];
-    len = strlen(ctx_val);
+    if (ctx_val != NULL) {
+      len = strlen(ctx_val);
+    }
+
     if (len == 0) {
       ctx_val = NULL;
     }
   }
 
   if (ctx_key != NULL &&
-      !isbase) {
+      is_base == FALSE) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_conf_pool, "<",
       ctx_key, ctx_val ? " " : "", ctx_val ? ctx_val : "", ">\n", NULL);
   }
@@ -603,7 +604,7 @@ static int sqlconf_read_ctx(pool *p, int ctx_id, int isbase) {
   }
 
   if (ctx_key != NULL &&
-      !isbase) {
+      is_base == FALSE) {
     *((char **) push_array(sqlconf_conf)) = pstrcat(sqlconf_conf_pool, "</",
       ctx_key, ">\n", NULL);
   }
@@ -879,34 +880,33 @@ static int sqlconf_fsio_stat(pr_fs_t *fs, const char *path, struct stat *st) {
 }
 
 static int sqlconf_fsio_open(pr_fh_t *fh, const char *path, int flags) {
+  pool *p;
+  char *driver = NULL, *uri;
 
   /* Is this a path that we can use? */
-  if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) == 0) {
-    pool *p;
-    char *driver = NULL, *uri;
-
-    sqlconf_conf_pool = make_sub_pool(conf_sql_pool);
-    pr_pool_tag(sqlconf_conf_pool, "SQL Configuration Pool");
-
-    p = sqlconf_conf_pool;
-    uri = pstrdup(p, path);
-
-    /* Parse through the given URI, breaking out the needed pieces. */
-    if (sqlconf_parse_uri(p, uri, &driver, &use_tracing) < 0) {
-      return -1;
-    }
-
-    if (sqlconf_conf == NULL &&
-        sqlconf_read_db(p, driver) < 0) {
-      return -1;
-    }
-
-    /* Return a fake file descriptor. */
-    return CONF_SQL_FILENO;
+  if (strncmp(CONF_SQL_URI_PREFIX, path, CONF_SQL_URI_PREFIX_LEN) != 0) {
+    /* Default normal open. */
+    return open(path, flags, PR_OPEN_MODE);
   }
 
-  /* Default normal open. */
-  return open(path, flags, PR_OPEN_MODE);
+  sqlconf_conf_pool = make_sub_pool(conf_sql_pool);
+  pr_pool_tag(sqlconf_conf_pool, "SQL Configuration Pool");
+
+  p = sqlconf_conf_pool;
+  uri = pstrdup(p, path);
+
+  /* Parse through the given URI, breaking out the needed pieces. */
+  if (sqlconf_parse_uri(p, uri, &driver, &use_tracing) < 0) {
+    return -1;
+  }
+
+  if (sqlconf_conf == NULL &&
+      sqlconf_read_db(p, driver) < 0) {
+    return -1;
+  }
+
+  /* Return a fake file descriptor. */
+  return CONF_SQL_FILENO;
 }
 
 static int sqlconf_fsio_close(pr_fh_t *fh, int fd) {
