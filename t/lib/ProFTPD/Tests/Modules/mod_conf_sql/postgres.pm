@@ -1,4 +1,4 @@
-package ProFTPD::Tests::Modules::mod_conf_sql::mysql;
+package ProFTPD::Tests::Modules::mod_conf_sql::postgres;
 
 use lib qw(t/lib);
 use base qw(ProFTPD::TestSuite::Child);
@@ -18,24 +18,24 @@ $| = 1;
 my $order = 0;
 
 my $TESTS = {
-  conf_sql_mysql_empty_config_simple_url_syntax_check => {
+  conf_sql_postgres_empty_config_simple_url_syntax_check => {
     order => ++$order,
-    test_class => [qw(forking mod_sql mod_sql_mysql)],
+    test_class => [qw(forking mod_sql mod_sql_postgres)],
   },
 
-  conf_sql_mysql_empty_config_complex_url_syntax_check => {
+  conf_sql_postgres_empty_config_complex_url_syntax_check => {
     order => ++$order,
-    test_class => [qw(forking mod_sql mod_sql_mysql)],
+    test_class => [qw(forking mod_sql mod_sql_postgres)],
   },
 
-  conf_sql_mysql_full_config_simple_url_syntax_check => {
+  conf_sql_postgres_full_config_simple_url_syntax_check => {
     order => ++$order,
-    test_class => [qw(forking mod_sql mod_sql_mysql)],
+    test_class => [qw(forking mod_sql mod_sql_postgres)],
   },
 
-  conf_sql_mysql_full_config_complex_url_syntax_check => {
+  conf_sql_postgres_full_config_complex_url_syntax_check => {
     order => ++$order,
-    test_class => [qw(forking mod_sql mod_sql_mysql)],
+    test_class => [qw(forking mod_sql mod_sql_postgres)],
   },
 
 };
@@ -90,7 +90,7 @@ sub run_cmd {
 
 # Test cases
 
-sub conf_sql_mysql_empty_config_simple_url_syntax_check {
+sub conf_sql_postgres_empty_config_simple_url_syntax_check {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'conf_sql');
@@ -105,12 +105,12 @@ sub conf_sql_mysql_empty_config_simple_url_syntax_check {
     $tracing = 'true';
   }
 
-  my $mysql_host = 'localhost';
-  if ($ENV{MYSQL_HOST}) {
-    $mysql_host = $ENV{MYSQL_HOST};
+  my $postgres_host = 'localhost';
+  if ($ENV{POSTGRES_HOST}) {
+    $postgres_host = $ENV{POSTGRES_HOST};
   }
 
-  my $url = "sql://mysql:mysql\@$mysql_host/proftpd?tracing=$tracing&driver=mysql";
+  my $url = "sql://postgres:postgres\@$postgres_host/proftpd?tracing=$tracing&driver=postgres";
 
   my $ex;
   my $cmd = "$proftpd_bin $proftpd_opts -c '$url' 2>&1";
@@ -122,7 +122,7 @@ sub conf_sql_mysql_empty_config_simple_url_syntax_check {
   test_cleanup($setup->{log_file}, $ex);
 }
 
-sub conf_sql_mysql_empty_config_complex_url_syntax_check {
+sub conf_sql_postgres_empty_config_complex_url_syntax_check {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'conf_sql');
@@ -137,12 +137,12 @@ sub conf_sql_mysql_empty_config_complex_url_syntax_check {
     $tracing = 'true';
   }
 
-  my $mysql_host = 'localhost';
-  if ($ENV{MYSQL_HOST}) {
-    $mysql_host = $ENV{MYSQL_HOST};
+  my $postgres_host = 'localhost';
+  if ($ENV{POSTGRES_HOST}) {
+    $postgres_host = $ENV{POSTGRES_HOST};
   }
 
-  my $url = "sql://mysql:mysql\@$mysql_host/proftpd?tracing=$tracing&driver=mysql&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+  my $url = "sql://postgres:postgres\@$postgres_host/proftpd?tracing=$tracing&driver=postgres&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 
   my $ex;
   my $cmd = "$proftpd_bin $proftpd_opts -c '$url' 2>&1";
@@ -154,7 +154,7 @@ sub conf_sql_mysql_empty_config_complex_url_syntax_check {
   test_cleanup($setup->{log_file}, $ex);
 }
 
-sub conf_sql_mysql_full_config_simple_url_syntax_check {
+sub conf_sql_postgres_full_config_simple_url_syntax_check {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'conf_sql');
@@ -188,13 +188,13 @@ sub conf_sql_mysql_full_config_simple_url_syntax_check {
     $verbose = '--verbose';
   }
 
-  my $mysql_host = 'localhost';
-  if ($ENV{MYSQL_HOST}) {
-    $mysql_host = $ENV{MYSQL_HOST};
+  my $postgres_host = 'localhost';
+  if ($ENV{POSTGRES_HOST}) {
+    $postgres_host = $ENV{POSTGRES_HOST};
   }
 
   my $ex;
-  my $cmd = "$conf2sql $verbose --dbdriver=mysql --dbserver=$mysql_host --dbuser=mysql --dbpass=mysql --dbname=proftpd $setup->{config_file}";
+  my $cmd = "$conf2sql $verbose --dbdriver=postgres --dbserver=$postgres_host --dbuser=postgres --dbpass=postgres --dbname=proftpd $setup->{config_file}";
   eval { run_cmd($cmd, 1) };
   if ($@) {
     $ex = $@;
@@ -215,7 +215,7 @@ sub conf_sql_mysql_full_config_simple_url_syntax_check {
     $tracing = 'true';
   }
 
-  my $url = "sql://mysql:mysql\@$mysql_host/proftpd?tracing=$tracing&driver=mysql";
+  my $url = "sql://postgres:postgres\@$postgres_host/proftpd?tracing=$tracing&driver=postgres";
 
   $cmd = "$proftpd_bin $proftpd_opts -c '$url'";
   eval { run_cmd($cmd, 1) };
@@ -226,7 +226,7 @@ sub conf_sql_mysql_full_config_simple_url_syntax_check {
   test_cleanup($setup->{log_file}, $ex);
 }
 
-sub conf_sql_mysql_full_config_complex_url_syntax_check {
+sub conf_sql_postgres_full_config_complex_url_syntax_check {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
   my $setup = test_setup($tmpdir, 'conf_sql');
@@ -260,13 +260,13 @@ sub conf_sql_mysql_full_config_complex_url_syntax_check {
     $verbose = '--verbose';
   }
 
-  my $mysql_host = 'localhost';
-  if ($ENV{MYSQL_HOST}) {
-    $mysql_host = $ENV{MYSQL_HOST};
+  my $postgres_host = 'localhost';
+  if ($ENV{POSTGRES_HOST}) {
+    $postgres_host = $ENV{POSTGRES_HOST};
   }
 
   my $ex;
-  my $cmd = "$conf2sql $verbose --dbdriver=mysql --dbserver=$mysql_host --dbuser=mysql --dbpass=mysql --dbname=proftpd $setup->{config_file}";
+  my $cmd = "$conf2sql $verbose --dbdriver=postgres --dbserver=$postgres_host --dbuser=postgres --dbpass=postgres --dbname=proftpd $setup->{config_file}";
   eval { run_cmd($cmd, 1) };
   if ($@) {
     $ex = $@;
@@ -287,7 +287,7 @@ sub conf_sql_mysql_full_config_complex_url_syntax_check {
     $tracing = 'true';
   }
 
-  my $url = "sql://mysql:mysql\@$mysql_host/proftpd?tracing=$tracing&driver=mysql&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
+  my $url = "sql://postgres:postgres\@$postgres_host/proftpd?tracing=$tracing&driver=postgres&ctx=ftpctx:id,parent_id,type,value&map=ftpmap:conf_id,ctx_id&conf=ftpconf:id,name,value";
 
   $cmd = "$proftpd_bin $proftpd_opts -c '$url'";
   eval { run_cmd($cmd, 1) };
