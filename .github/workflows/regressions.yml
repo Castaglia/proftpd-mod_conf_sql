@@ -23,7 +23,24 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       DEBIAN_FRONTEND: noninteractive
+      MYSQL_HOST: mysql
       TZ: America/Los_Angeles
+
+    services:
+      mysql:
+        # Docker Hub image
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: proftpd
+          MYSQL_PASSWORD: mysql
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_USER: mysql
+        # Set health checks to wait until mysql has started
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     strategy:
       matrix:
@@ -52,6 +69,8 @@ jobs:
           # for builds
           apt-get install -y gcc git make tzdata
 
+          # for MySQL support
+          apt-get install -y libmysqlclient-dev mysql-client
           # for SQLite support
           apt-get install -y libsqlite3-dev sqlite3
 
@@ -61,6 +80,7 @@ jobs:
             libcompress-raw-zlib-perl \
             libdata-dumper-simple-perl \
             libdatetime-perl \
+            libdbd-mysql-perl \
             libdbd-sqlite3-perl \
             libdbi-perl \
             libfile-copy-recursive-perl \
@@ -85,7 +105,7 @@ jobs:
         # NOTE: Docker does not have good IPv6 support, hence we disable it.
         run: |
           cd proftpd
-          ./configure --disable-ipv6 --with-modules=mod_sql:mod_sql_sqlite:mod_conf_sql
+          ./configure --disable-ipv6 --with-modules=mod_sql:mod_sql_mysql:mod_sql_sqlite:mod_conf_sql
           make
           ./proftpd -V
           make install
@@ -97,4 +117,5 @@ jobs:
           PROFTPD_TEST_DIR: ${{ github.workspace }}/proftpd/tests
         run: |
           cd proftpd/contrib/mod_conf_sql
+          mysql --host=$MYSQL_HOST --user=mysql --password=mysql proftpd < t/etc/modules/mod_conf_sql/mysql-conf.sql
           perl tests.pl

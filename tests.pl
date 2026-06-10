@@ -62,6 +62,10 @@ if (scalar(@ARGV) > 0) {
   my $order = 0;
 
   my $FEATURE_TESTS = {
+    't/modules/mod_conf_sql/mysql.t' => {
+      order => ++$order,
+      test_class => [qw(mod_sql_mysql)],
+    },
   };
 
   my @feature_tests = testsuite_get_runnable_tests($FEATURE_TESTS);
