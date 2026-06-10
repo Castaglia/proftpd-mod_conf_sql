@@ -24,6 +24,7 @@ jobs:
 
       DEBIAN_FRONTEND: noninteractive
       MYSQL_HOST: mysql
+      POSTGRES_HOST: postgres
       TZ: America/Los_Angeles
 
     services:
@@ -38,6 +39,20 @@ jobs:
         # Set health checks to wait until mysql has started
         options: >-
           --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        # Docker Hub image
+        image: postgres:18
+        env:
+          POSTGRES_DB: proftpd
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd "pg_isready -U postgres -d proftpd"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -71,6 +86,8 @@ jobs:
 
           # for MySQL support
           apt-get install -y libmysqlclient-dev mysql-client
+          # for Postgres support
+          apt-get install -y libpq-dev postgresql-client
           # for SQLite support
           apt-get install -y libsqlite3-dev sqlite3
 
@@ -81,6 +98,7 @@ jobs:
             libdata-dumper-simple-perl \
             libdatetime-perl \
             libdbd-mysql-perl \
+            libdbd-pg-perl \
             libdbd-sqlite3-perl \
             libdbi-perl \
             libfile-copy-recursive-perl \
@@ -105,7 +123,7 @@ jobs:
         # NOTE: Docker does not have good IPv6 support, hence we disable it.
         run: |
           cd proftpd
-          ./configure --disable-ipv6 --with-modules=mod_sql:mod_sql_mysql:mod_sql_sqlite:mod_conf_sql
+          ./configure --disable-ipv6 --with-modules=mod_sql:mod_sql_mysql:mod_sql_postgres:mod_sql_sqlite:mod_conf_sql
           make
           ./proftpd -V
           make install
@@ -118,4 +136,5 @@ jobs:
         run: |
           cd proftpd/contrib/mod_conf_sql
           mysql --host=$MYSQL_HOST --user=mysql --password=mysql proftpd < t/etc/modules/mod_conf_sql/mysql-conf.sql
+          PGPASSWORD=postgres psql --host=$POSTGRES_HOST --username=postgres -w -d proftpd -f t/etc/modules/mod_conf_sql/postgres-conf.sql
           perl tests.pl

@@ -66,6 +66,11 @@ if (scalar(@ARGV) > 0) {
       order => ++$order,
       test_class => [qw(mod_sql_mysql)],
     },
+
+    't/modules/mod_conf_sql/postgres.t' => {
+      order => ++$order,
+      test_class => [qw(mod_sql_postgres)],
+    },
   };
 
   my @feature_tests = testsuite_get_runnable_tests($FEATURE_TESTS);
